@@ -15,37 +15,6 @@ def taxid2asm(taxid,n=1):
     ftp = strain['ftp_path'][:n].tolist()
     asm = [x.rsplit('/',1)[1] for x in ftp]
     return(asm)
-
-def calc_cov_preset(asm, sample, DNA_loc, preset):
-    ### Align reads ##
-    if not os.path.exists(f'bams/{asm}_{sample}_{preset}_all.sorted.bam'):
-        subprocess.call(f'bowtie2 -a -p 64 -x strains/{asm}/{asm}.fna -1 {DNA_loc}_1.fastq.gz -2 {DNA_loc}_2.fastq.gz --{preset} |samtools view --threads 64 -b - |samtools sort - -o bams/{asm}_{sample}_{preset}_all.sorted.bam --threads 64', shell=True)
-        subprocess.call(f'samtools index bams/{asm}_{sample}_{preset}_all.sorted.bam -@ 64', shell = True)
-
-    #Get read depth of genome
-    if not os.path.exists(f'beds/{asm}_{sample}_{preset}_all.bw'):
-        subprocess.call(f'bamCoverage --bam bams/{asm}_{sample}_{preset}_all.sorted.bam -p 64 -o beds/{asm}_{sample}_{preset}_all.bw -of bigwig', shell = True)
-
-    ### Generate matrix ###
-    if not os.path.exists(f'matrices/{asm}_{sample}_{preset}_all.csv'):
-        bp_depth = pyBigWig.open(f'beds/{asm}_{sample}_{preset}_all.bw')
-        genome_dict = bp_depth.chroms()
-        genomes = list(genome_dict.keys())
-        tss_dat = pd.read_csv(f'strains/{asm}/{asm}_filtered_tss.csv', header = 0)
-        tss_dat = tss_dat.to_numpy()
-        locus_tag = np.array([re.match(r'^ID=([^;]*)',x).group(1) for x in tss_dat[:,4]])
-        mat = []
-        for row in tss_dat:
-            chrom = row[0]
-            if (row[5] <= 550) or (row[5] + 550 >= genome_dict[chrom]):
-                window = [0]*1001
-            else:
-                window = bp_depth.values(chrom,int(row[5])-501,int(row[5])+500)
-                if row[3]=="-": window.reverse()
-            mat.append(window)
-        mat = np.array(mat)
-        x = np.hstack((locus_tag[np.newaxis].T,mat))
-        np.savetxt(f'matrices/{asm}_{sample}_{preset}_all.csv',x,fmt='%s',delimiter=',')
         
 def calc_cov_mp(asm, sample, DNA_loc, mp):
     ### Align reads ##
@@ -153,16 +122,6 @@ def window_NM(bam_file, gene_annot):
             continue
         NM_scores.append(np.mean(NM_set))
     return(NM_scores)
-
-def all_MAPQ(bam_file, gene_annot):
-    mapq_scores = []
-    for gene in np.array(gene_annot):
-        left = int(gene[5]) - 501
-        right = int(gene[5]) + 500
-        for read in bam_file.fetch(gene[0],left,right):
-            if(not read.is_unmapped):
-                mapq_scores.append(read.mapping_quality)
-    return(mapq_scores)
 
 def unique_MAPQ(bam_file, gene_annot):
     count = 0
@@ -275,7 +234,7 @@ np.mean(all_cv.loc[(all_cv.variable=='6 (default)'),'value']) # 26.37
 np.mean(all_cv.loc[(all_cv.variable=='4'),'value']) # 27.48
 np.mean(all_cv.loc[(all_cv.variable=='2'),'value']) # 28.26
 
-### Check MAPQ Quality ###
+### Check number of mismatches ###
 mapq_df = []
 for sample in Franzosa_mpa.columns:
     for taxid in Franzosa_mpa.index:
@@ -286,16 +245,14 @@ for sample in Franzosa_mpa.columns:
         gene_annot = gene_annot[(gene_annot.Strand == '-') & (gene_annot.Start > 750)] #Incase of fetching beyond start of genome
         
         bam_file = pysam.AlignmentFile(f'bams/{asm}_{sample}.sorted.bam', "rb")
-        all_mapq = all_MAPQ(bam_file,gene_annot)
         unique_count = unique_MAPQ(bam_file,gene_annot)
         NM_avg = np.mean(window_NM(bam_file, gene_annot))
-        mapq_df.append([sample, asm, '6 (default)', np.mean(all_mapq), unique_count, NM_avg])
+        mapq_df.append([sample, asm, '6 (default)', unique_count, NM_avg])
         for mp in mp_parameters:
             bam_file = pysam.AlignmentFile(f'bams/{asm}_{sample}_mp{mp}.sorted.bam', "rb")
-            all_mapq = all_MAPQ(bam_file,gene_annot)
             unique_count = unique_MAPQ(bam_file,gene_annot)
             NM_avg = np.mean(window_NM(bam_file, gene_annot))
-            mapq_df.append([sample, asm, mp, np.mean(all_mapq), unique_count, NM_avg])
+            mapq_df.append([sample, asm, mp, unique_count, NM_avg])
 mapq_df = pd.DataFrame(mapq_df, columns = ['sample','asm','mp','mean_MAPQ', 'unique_count', 'NM_avg'])     
 
 sns.boxplot(data = mapq_df, x = 'mp', y= 'unique_count', order= ['8', '6 (default)','4','2'], showfliers=False)
@@ -306,13 +263,6 @@ plt.xlabel('Mismatch penalty')
 plt.ylabel('Total unique reads')
 plt.tight_layout()
 plt.savefig(f"plots/relaxed_aligner/all_unique_reads_mp.pdf")
-plt.clf()
-
-sns.boxplot(data = mapq_df, x = 'mp', y= 'unique_MAPQ', order= ['mp6','mp4','mp2'], showfliers=False)
-#add_p_val(plt,0,1,500000,10000,ttest_rel(mapq_df.loc[(mapq_df.mp=='mp6'),'unique_MAPQ'],mapq_df.loc[(mapq_df.mp=='mp4'),'unique_MAPQ']).pvalue)
-#add_p_val(plt,1,2,550000,10000,ttest_rel(mapq_df.loc[(mapq_df.mp=='mp4'),'unique_MAPQ'],mapq_df.loc[(mapq_df.mp=='mp2'),'unique_MAPQ']).pvalue)
-#add_p_val(plt,0,2,600000,10000,ttest_rel(mapq_df.loc[(mapq_df.mp=='mp6'),'unique_MAPQ'],mapq_df.loc[(mapq_df.mp=='mp2'),'unique_MAPQ']).pvalue)
-plt.savefig("plots/relaxed_aligner/all_MAPQ_unique.pdf")
 plt.clf()
 
 sns.boxplot(data = mapq_df, x = 'mp', y= 'NM_avg', order= ['8', '6 (default)','4','2'], showfliers=False)
@@ -342,7 +292,7 @@ for sample in Franzosa_mpa.columns:
         tpm_file.index = [x.replace(x.rsplit('_',1)[0],chrom_map.get(x.rsplit('_',1)[0],'na')) for x in tpm_file.index]
         tpm_dict = tpm_file.to_dict()
 
-        #Get gene downstream MAPQ
+        #Get gene No. mismatch
         gene_annot = pd.read_csv(f'strains/{asm}/{asm}_filtered_tss.csv')
         gene_annot = gene_annot[(gene_annot.Strand == '-') & (gene_annot.Start > 750)] #Incase of fetching beyond start of genome
         gene_annot['gene_id'] = [re.match(r'ID=(\d+_\d+);',x).group(1) for x in gene_annot['Desc']]

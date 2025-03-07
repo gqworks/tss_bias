@@ -57,7 +57,7 @@ Franzosa_mpa = mpa_res.loc[:,Franzosa_8.keys()]
 Franzosa_mpa = Franzosa_mpa.loc[((Franzosa_mpa > 1).sum(axis=1) >= 5),:] 
 Franzosa_mpa[Franzosa_mpa < 1] = np.nan
 Franzosa_mpa = Franzosa_mpa.drop(39491) #Eubacterium Rectale no reference in database.
-'''
+
 # Create database sketch of all reference genomes
 all_asms = []
 for taxid in Franzosa_mpa.index:
@@ -94,6 +94,7 @@ plt.text(15, 95.5, 'R = ' + str(round(ani_stat[0],3)) + '  p = ' + str(round(ani
 plt.savefig(f"plots/containment_hashing/all.pdf")
 plt.clf()
 
+'''
 for asm in set(all_df.asm):
     dat = all_df[all_df.asm==asm]
     sns.regplot(data = dat, x="bias", y="Adjusted_ANI")
@@ -115,7 +116,8 @@ for spe in set(avg_all_df.species):
     plt.savefig(f"plots/containment_hashing/{spe}.pdf")
     plt.clf()
 '''
-    
+
+'''
 ### Perform hashing only of uniquely aligned reads
 # Extract uniquely mapped reads
 if not os.path.exists('unique_reads/'):
@@ -158,17 +160,15 @@ stats.pearsonr(all_df['bias'], all_df['containment_ind_perc']) #(0.5704018126121
 plt.savefig(f"plots/containment_hashing/all_containment_ind_unique_mp2.pdf")
 plt.clf()
             
-
-
 for asm in set(all_df.asm):
     dat = all_df[all_df.asm==asm]
-    #sns.regplot(data = dat, x="bias", y="Adjusted_ANI")
-    #print(asm, stats.pearsonr(dat['bias'], dat['Adjusted_ANI']))
-    #plt.savefig(f"plots/containment_hashing/{asm}_unique_reads.pdf")
-    #plt.clf()
+    sns.regplot(data = dat, x="bias", y="Adjusted_ANI")
+    print(asm, stats.pearsonr(dat['bias'], dat['Adjusted_ANI']))
+    plt.savefig(f"plots/containment_hashing/{asm}_unique_reads.pdf")
+    plt.clf()
     
     sns.regplot(data = dat, x="bias", y="containment_ind_perc")
     print(asm, stats.pearsonr(dat['bias'], dat['containment_ind_perc']))
-    #plt.savefig(f"plots/containment_hashing/{asm}_unique_reads.pdf")
-    #plt.clf()
-
+    plt.savefig(f"plots/containment_hashing/{asm}_unique_reads.pdf")
+    plt.clf()
+'''

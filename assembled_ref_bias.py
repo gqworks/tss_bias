@@ -87,9 +87,9 @@ with open('Franzosa_8_samples') as f:
 Franzosa_8 = {x.split('\t')[0]:x.split('\t')[1] for x in Franzosa_8}
 
 # Assemble samples
-#for sample,path in Franzosa_8.items():
-#    subprocess.call(f'ml megahit && megahit -t 64 -1 {path}_1.fastq.gz -2 {path}_2.fastq.gz -o assembled_ref/{sample}', shell = True)
-#    subprocess.call(f'bowtie2-build assembled_ref/{sample}/final.contigs.fa assembled_ref/{sample}/final.contigs.fa', shell=True)
+for sample,path in Franzosa_8.items():
+    subprocess.call(f'ml megahit && megahit -t 64 -1 {path}_1.fastq.gz -2 {path}_2.fastq.gz -o assembled_ref/{sample}', shell = True)
+    subprocess.call(f'bowtie2-build assembled_ref/{sample}/final.contigs.fa assembled_ref/{sample}/final.contigs.fa', shell=True)
 
 # Align reads to assembled reference and bin
 for sample,path in Franzosa_8.items():
@@ -98,23 +98,23 @@ for sample,path in Franzosa_8.items():
         subprocess.call(f'samtools index bams/{sample}_assembled_ref.sorted.bam -@ 64', shell = True)
 
     # Get read depth of genome
-    #if not os.path.exists(f'beds/{sample}_assembled_ref.bw'):
-    #    subprocess.call(f'bamCoverage --bam bams/{sample}_assembled_ref.sorted.bam -p 64 -o beds/{sample}_assembled_ref.bw -of bigwig', shell = True)
+    if not os.path.exists(f'beds/{sample}_assembled_ref.bw'):
+        subprocess.call(f'bamCoverage --bam bams/{sample}_assembled_ref.sorted.bam -p 64 -o beds/{sample}_assembled_ref.bw -of bigwig', shell = True)
     
     # Annotate genes w/ prodigal
-    #if not os.path.exists(f'assembled_ref/{sample}/prodigal.gff'):
-    #    subprocess.call(f'prodigal -i assembled_ref/{sample}/final.contigs.fa -o assembled_ref/{sample}/prodigal.gff -f gff -p meta -d assembled_ref/{sample}/prodigal.fna', shell = True)
+    if not os.path.exists(f'assembled_ref/{sample}/prodigal.gff'):
+        subprocess.call(f'prodigal -i assembled_ref/{sample}/final.contigs.fa -o assembled_ref/{sample}/prodigal.gff -f gff -p meta -d assembled_ref/{sample}/prodigal.fna', shell = True)
     
     # Bin Contigs
-    #subprocess.call(f'ml MetaBAT && jgi_summarize_bam_contig_depths --outputDepth assembled_ref/{sample}/depth.txt bams/{sample}_assembled_ref.sorted.bam', shell = True)
-    #subprocess.call(f'ml MetaBAT && metabat2 -t 64 -i assembled_ref/{sample}/final.contigs.fa -a assembled_ref/{sample}/depth.txt -o assembled_ref/{sample}/metabat/bin', shell = True)
+    subprocess.call(f'ml MetaBAT && jgi_summarize_bam_contig_depths --outputDepth assembled_ref/{sample}/depth.txt bams/{sample}_assembled_ref.sorted.bam', shell = True)
+    subprocess.call(f'ml MetaBAT && metabat2 -t 64 -i assembled_ref/{sample}/final.contigs.fa -a assembled_ref/{sample}/depth.txt -o assembled_ref/{sample}/metabat/bin', shell = True)
     
     # Annotate contig bins with Kraken2
-    #if not os.path.exists(f'assembled_ref/{sample}/kraken_res/'):
-    #    os.mkdir(f'assembled_ref/{sample}/kraken_res/')
-    #for i in glob.glob(f'assembled_ref/{sample}/metabat/*.fa'):
-    #    bin_no = re.match('.*(bin\.\d+)\.fa',i).group(1)
-    #    subprocess.call(f'ml ncbi-blast kraken && kraken2 --threads 64 --db /groups/cgsd/hbyao/db/bfv/ --output assembled_ref/{sample}/kraken_res/{bin_no}.kra --report assembled_ref/{sample}/kraken_res/{bin_no}.report {i}', shell = True)  
+    if not os.path.exists(f'assembled_ref/{sample}/kraken_res/'):
+        os.mkdir(f'assembled_ref/{sample}/kraken_res/')
+    for i in glob.glob(f'assembled_ref/{sample}/metabat/*.fa'):
+        bin_no = re.match('.*(bin\.\d+)\.fa',i).group(1)
+        subprocess.call(f'ml ncbi-blast kraken && kraken2 --threads 64 --db /groups/cgsd/hbyao/db/bfv/ --output assembled_ref/{sample}/kraken_res/{bin_no}.kra --report assembled_ref/{sample}/kraken_res/{bin_no}.report {i}', shell = True)  
 
 # Find number of reads aligned
 read_count_df = []
@@ -135,7 +135,7 @@ Franzosa_mpa = Franzosa_mpa.loc[((Franzosa_mpa > 1).sum(axis=1) >= 5),:] # Filte
 Franzosa_mpa[Franzosa_mpa < 1] = np.nan
 Franzosa_mpa = Franzosa_mpa.drop(39491)
 
-# Calculate Bias using bins
+# Calculate Bias in bins
 bias_means = []
 for sample in Franzosa_mpa.columns:
     bw_contig = pyBigWig.open(f'beds/{sample}_assembled_ref.bw')
@@ -207,7 +207,7 @@ add_p_val(plt,0,1,80,3,ttest_rel(bias_means[4],bias_means[5]).pvalue)
 plt.savefig(f"plots/assembled_ref_boxplot_bins_avg_cv.pdf")
 plt.clf()
 
-
+'''
 # Calculate Bias using contigs
 bias_means = []
 mapped_reads = []
@@ -289,3 +289,4 @@ sns.boxplot(data=bias_means, showfliers=False, color = 'tab:blue')
 add_p_val(plt,0,1,105,3,ttest_rel(bias_means[2],bias_means[3]).pvalue) # Ttest_relResult(statistic=4.0750025977880835, pvalue=0.0003262267921443576)
 plt.savefig(f"plots/assembled_ref_boxplot.pdf")
 plt.clf()
+'''
