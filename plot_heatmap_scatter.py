@@ -145,7 +145,7 @@ for taxid in Franzosa_mpa.index:
     all_strains = all_strains + asms
 dataset_asm_2_species = {x:asm_2_species(x) for x in all_strains}
 
-'''
+
 ##########
 ### GC ###
 ##########
@@ -299,11 +299,11 @@ all_pvals['corr'] = [float(re.match(r'\(([^,]*),.*',x).group(1)) for x in all_pv
 all_pvals['species'] = all_pvals['asm'].map(dataset_asm_2_species)
 all_pvals = all_pvals.groupby(['sample','species']).mean().reset_index()
 all_pvals['adj_pval'] = multi.multipletests(all_pvals.pval, method = 'fdr_bh', alpha = 0.05)[1]
-all_pvals['neg_log'] = -np.log(all_pvals['adj_pval'])
+all_pvals['neg_log'] = -np.log10(all_pvals['adj_pval'])
 
 g = sns.boxplot(data = all_pvals, y = 'species', x = 'neg_log', orient = 'h', color = 'tab:blue', showfliers=False)
-plt.xlabel("-log(p-value)")
-plt.axvline(-np.log(0.05), color='r')
+plt.xlabel("-log10(p-value)")
+plt.axvline(-np.log10(0.05), color='r')
 g.figure.savefig(f"plots/null_distributions/all_samp_species_pval_boxplot.pdf", bbox_inches="tight")
 plt.clf()
 
@@ -330,7 +330,7 @@ scaled_null = scale_mat(null_mat)
 scaled_null = scaled_null.fillna(0)
 sorted_null = null_mat.loc[sort_tss_bias(scaled_null),:]
 plot_heatmap(sorted_null, f'plots/coverage_heatmaps/{asm}_{sample}_null.png',vmax=vmax, dpi = 300)
-'''
+
 #########################################
 ####### Validation in Long reads ########
 #########################################
@@ -428,9 +428,9 @@ all_LR_pvals['species'] = all_LR_pvals['Strain'].map(platform_asm_2_species)
 all_LR_pvals = all_LR_pvals.groupby(['species','Sample','type']).mean().reset_index()
 sum(all_LR_pvals[all_LR_pvals.type=='adj_pval_all']['pval'] < 0.05) # 27
 sum(all_LR_pvals[all_LR_pvals.type=='adj_pval_long']['pval'] < 0.05) # 73
-all_LR_pvals['pval_log'] = -np.log(all_LR_pvals['pval'])
+all_LR_pvals['pval_log'] = -np.log10(all_LR_pvals['pval'])
 
 g = sns.boxplot(data = all_LR_pvals, y = 'species', x = 'pval_log', orient = 'h', hue = 'type', showfliers=False)
-plt.axvline(-np.log(0.05), color='r')
+plt.axvline(-np.log10(0.05), color='r')
 g.figure.savefig(f"plots/null_distributions/longread_pval_boxplot.pdf", bbox_inches="tight")
 plt.clf()
