@@ -166,11 +166,20 @@ mpa_res = mpa_res.drop(39491) #Eubacterium Rectale no reference in database.
 
 refseq = pd.read_table('src/assembly_summary_refseq.txt', header = 1)
 
+all_asm = {
+    '310297': ['GCF_000187895.1_ASM18789v1', 'GCF_000433715.1_MGS211', 'GCF_003438135.1_ASM343813v1'],
+    '820': ['GCF_006742345.1_ASM674234v1', 'GCF_018292165.1_ASM1829216v1', 'GCF_018289375.1_ASM1828937v1'],
+    '821': ['GCF_000012825.1_ASM1282v1', 'GCF_008728395.1_ASM872839v1', 'GCF_018289355.1_ASM1828935v1'],
+    '28117': ['GCF_000154465.1_ASM15446v1','GCF_000436355.1_MGS67','GCF_902373695.1_MGYG-HGUT-01302'],
+    '823': ['GCF_000012845.1_ASM1284v1', 'GCF_006149185.1_ASM614918v1', 'GCF_900683725.1_Parabacteroides_distasonis_82G9'],
+    '301302': ['GCF_001405615.1_13414_6_47', 'GCF_001406815.1_M72', 'GCF_009718425.1_ASM971842v1'],
+    '853': ['GCF_002586945.1_ASM258694v1', 'GCF_003312465.1_ASM331246v1','GCF_902388275.1_UHGG_MGYG-HGUT-02545'],
+    '40518': ['GCF_002834165.1_ASM283416v1', 'GCF_002834225.1_ASM283422v1', 'GCF_002834235.1_ASM283423v1']
+}
 
 all_dat = pd.DataFrame()
-for taxid in mpa_res.index:
-    asms = taxid2asm(taxid,3)
-    for asm in asms:
+for taxid in all_asm.keys():
+    for asm in all_asm[taxid]:
         # Load gene regions
         gene_annot = pd.read_csv(f'strains/{asm}/{asm}_filtered_tss.csv')
         #Filter short genes
@@ -180,7 +189,7 @@ for taxid in mpa_res.index:
         reference_genome = FastaFile(f'strains/{asm}/{asm}.fna')
         
         for sample in samples:
-            if np.isnan(mpa_res.loc[taxid,sample]):
+            if np.isnan(mpa_res.loc[int(taxid),sample]):
                 continue
             # Load alignments
             aln_file = pysam.AlignmentFile(f'bams/{asm}_{sample}.sorted.bam', "rb")

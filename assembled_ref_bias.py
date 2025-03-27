@@ -198,7 +198,7 @@ bias_means.to_csv("plots/assembled_ref_bias_bins.csv")
 bias_means = pd.read_csv("plots/assembled_ref_bias_bins.csv", index_col = 0)
 bias_means.columns = ['asm','sample','Reference genome','Assembled reference','Reference genome cv', 'Assembled reference cv']
 sns.boxplot(data=bias_means[['Reference genome','Assembled reference']], showfliers=False, color = 'tab:blue')
-add_p_val(plt,0,1,95,3,ttest_rel(bias_means['Reference genome'],bias_means['Assembled reference']).pvalue)
+add_p_val(plt,0,1,95,3,ttest_rel(bias_means['Reference genome'],bias_means['Assembled reference']).pvalue) # 0.4178
 plt.ylabel('Average TSS bias')
 plt.savefig(f"plots/assembled_ref_boxplot_bins.pdf")
 plt.clf()

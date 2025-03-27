@@ -17,6 +17,15 @@ def asm_2_species(asm):
     name = refseq[refseq['ftp_path'].str.contains(asm)]['organism_name'].item()
     return re.match(r'(^[^ ]+ [^ ]+).*',name).group(1)
 
+def asm2ftp(a):
+    acc = "_".join(a.split("_", 2)[:2])
+    asm = a.split("_", 2)[2]
+    strain = refseq[(refseq['#assembly_accession']==acc) & (refseq['asm_name']==asm)]
+    if len(strain) == 0:
+        return(0)
+    ftp = strain['ftp_path'].tolist()[0]
+    return(ftp)
+
 def prepare_species_folder(ftp):
     asm = ftp.rsplit('/',1)[1]
     tax_path = f'strains/{asm}'
@@ -129,6 +138,8 @@ Franzosa_mpa = Franzosa_mpa.loc[((Franzosa_mpa > 1).sum(axis=1) >= 5),:] # Filte
 Franzosa_mpa[Franzosa_mpa < 1] = np.nan
 Franzosa_mpa = Franzosa_mpa.drop(39491) #Eubacterium Rectale no reference in database.
 
+'''
+#Original Analysis using different Refseq version
 seq_type = 'illumina'
 for sample in Franzosa_mpa.columns:
     DNA_loc = Franzosa_8[sample]
@@ -139,8 +150,31 @@ for sample in Franzosa_mpa.columns:
         for ftp in ftps:
             asm = prepare_species_folder(ftp)
             calc_cov(asm,sample,DNA_loc,seq_type)
+'''
+#Hard code selected genomes
+selected_genomes = {820: ['GCF_006742345.1_ASM674234v1', 'GCF_018292165.1_ASM1829216v1', 'GCF_018289375.1_ASM1828937v1'], # 820 Bacteroides uniformis
+                    821: ['GCF_000012825.1_ASM1282v1', 'GCF_008728395.1_ASM872839v1','GCF_018289355.1_ASM1828935v1'], # 821 Phocaeicola vulgatus
+                    28117: ['GCF_000154465.1_ASM15446v1','GCF_000436355.1_MGS67','GCF_902373695.1_MGYG-HGUT-01302'], # 28117 Alistipes putredinis
+                    823: ['GCF_000012845.1_ASM1284v1','GCF_006149185.1_ASM614918v1','GCF_900683725.1_Parabacteroides_distasonis_82G9'], # 823 Parabacteroides distasonis
+                    39485: ['GCF_000146185.1_ASM14618v1','GCF_020735745.1_ASM2073574v1'], # 39485 Lachnospira eligens
+                    1150298: ['GCF_001404555.1_14207_7_46','GCF_001405555.1_13414_6_33','GCF_001406335.1_14207_7_8'], # 1150298 Fusicatenibacter saccharivorans
+                    853: ['GCF_002586945.1_ASM258694v1','GCF_003312465.1_ASM331246v1','GCF_902388275.1_UHGG_MGYG-HGUT-02545']} # Faecalibacterium prausnitzii
+seq_type = 'illumina'
+for sample in Franzosa_mpa.columns:
+    DNA_loc = Franzosa_8[sample]
+    for taxid in Franzosa_mpa.index:
+        if np.isnan(Franzosa_mpa.loc[taxid,sample]):
+            continue
+        for asm in selected_genomes[taxid]:
+            calc_cov(asm,sample,DNA_loc,seq_type)
 
-
+missing_ftps = ['https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/001/404/555/GCF_001404555.1_14207_7_46',
+                'https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/001/405/555/GCF_001405555.1_13414_6_33',
+               'https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/001/406/335/GCF_001406335.1_14207_7_8']
+for f in missing_ftps:
+    asm = prepare_species_folder(f)  
+    calc_cov(asm,sample,DNA_loc,seq_type)
+    
 ### Alternate Illumina datasets ###
 with open('arg_samples') as f:
     arg_samples = f.read().splitlines()
@@ -225,3 +259,14 @@ for sample in arg_mpa.columns:
         for ftp in ftps:
             asm = prepare_species_folder(ftp)
             calc_cov(asm,sample,DNA_loc,seq_type)
+            
+all_asm = {
+    '310297': ['GCF_000187895.1_ASM18789v1', 'GCF_000433715.1_MGS211', 'GCF_003438135.1_ASM343813v1'],
+    '820': ['GCF_006742345.1_ASM674234v1', 'GCF_018292165.1_ASM1829216v1', 'GCF_018289375.1_ASM1828937v1'],
+    '821': ['GCF_000012825.1_ASM1282v1', 'GCF_008728395.1_ASM872839v1', 'GCF_018289355.1_ASM1828935v1'],
+    '28117': ['GCF_000154465.1_ASM15446v1','GCF_000436355.1_MGS67','GCF_902373695.1_MGYG-HGUT-01302'],
+    '823': ['GCF_000012845.1_ASM1284v1', 'GCF_006149185.1_ASM614918v1', 'GCF_900683725.1_Parabacteroides_distasonis_82G9'],
+    '301302': ['GCF_001405615.1_13414_6_47', 'GCF_001406815.1_M72', 'GCF_009718425.1_ASM971842v1'],
+    '853': ['GCF_002586945.1_ASM258694v1', 'GCF_003312465.1_ASM331246v1','GCF_902388275.1_UHGG_MGYG-HGUT-02545'],
+    '40518': ['GCF_002834165.1_ASM283416v1', 'GCF_002834225.1_ASM283422v1', 'GCF_002834235.1_ASM283423v1']
+}
