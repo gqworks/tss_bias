@@ -8,17 +8,9 @@ from align.matrix import DNAFULL
 from Bio.Seq import Seq
 import seaborn as sns
 from scipy import stats
-
+from tqdm import tqdm
 
 SMALL_BUFFER = 5
-
-def taxid2asm(taxid,n=1):
-    strain = refseq[(refseq['species_taxid']==int(taxid)) & (refseq['assembly_level']=='Complete Genome')]
-    if len(strain) == 0:
-        strain = refseq[(refseq['species_taxid']==int(taxid))]
-    ftp = strain['ftp_path'][:n].tolist()
-    asm = [x.rsplit('/',1)[1] for x in ftp]
-    return(asm)
 
 def get_tpm(file):
     dat = pd.read_table(file)
@@ -62,81 +54,84 @@ def calc_upstream_diversity(gene,aln_file,read_index,window=50, read_len=151):
                 align_score.append(aligner(read_seq, genome_seq, method='glocal', max_hits=1, matrix=DNAFULL)[0][-1])
     return np.median(align_score)
 
-def asm_2_species(asm):
-    name = refseq[refseq['ftp_path'].str.contains(asm)]['organism_name'].item()
-    name = re.match(r'(^[^ ]+ [^ ]+).*',name).group(1)
-    if name == '[Eubacterium] eligens':
-        name = 'Lachnospira eligens'
-    return name
 
+#with open('sample_lists/Franzosa_8_samples') as f:
+#    samples = f.read().splitlines()
+#samples = [x.rsplit('\t',1)[0] for x in samples]
 
-
-with open('Franzosa_8_samples') as f:
-    samples = f.read().splitlines()
-samples = [x.rsplit('\t',1)[0] for x in samples]
+with open('sample_lists/hmp2_samples') as f:
+    hmp2_samples = f.read().splitlines()
+hmp2_samples = {x.split('\t')[0]:x.split('\t')[1] for x in hmp2_samples}
 
 #Read species abundances
-mpa_res = pd.read_table('metaphlan3_res/merged_mpa.txt', comment= '#')
-mpa_res = mpa_res[mpa_res['clade_name'].str.contains("s__")]
-mpa_res.index = [int(re.match('.*\|([^\|]*)',x).group(1)) for x in mpa_res['NCBI_tax_id']]
-mpa_res = mpa_res.drop(columns=['clade_name', 'NCBI_tax_id'])
-mpa_res = mpa_res.loc[:,samples]
-mpa_res = mpa_res.loc[((mpa_res > 1).sum(axis=1) >= 5),:] # Filter species with atleast 1% abundance in atleast 5 samples
-mpa_res[mpa_res < 1] = np.nan
-mpa_res = mpa_res.drop(39491) #Eubacterium Rectale no reference in database.
+mpa_res = pd.read_table('mpa4_res/merged_mpa.txt', comment= '#')
+mpa_res = mpa_res[(mpa_res['clade_name'].str.contains("s__"))&(~mpa_res['clade_name'].str.contains("t__"))]
+mpa_res.index = [re.match('.*\|([^\|]*)',x).group(1) for x in mpa_res['clade_name']]
+mpa_res = mpa_res.drop(columns=['clade_name'])
 
-refseq = pd.read_table('src/assembly_summary_refseq.txt', header = 1)
+hmp2_mpa = mpa_res.loc[:,hmp2_samples.keys()]
+hmp2_mpa = hmp2_mpa.loc[((hmp2_mpa > 0.5).sum(axis=1) >= 30),:] # Filter species with atleast 0.5% abundance in atleast 30 samples
+hmp2_mpa = hmp2_mpa.where(hmp2_mpa > 0.5, np.nan)
+
+hmp2_genomes = {'s__Phocaeicola_vulgatus': 'GCF_000012825.1_ASM1282v1',
+ 's__Agathobacter_rectalis': 'GCF_022453685.1_ASM2245368v1',
+ 's__Alistipes_putredinis': 'GCF_000154465.1_ASM15446v1',
+ 's__Faecalibacterium_prausnitzii': 'GCF_000154385.1_ASM15438v1',
+ 's__Bacteroides_uniformis': 'GCF_044361425.1_ASM4436142v1',
+ 's__Parabacteroides_distasonis': 'GCF_018279895.1_ASM1827989v1',
+ 's__Bacteroides_caccae': 'GCF_018292205.1_ASM1829220v1'}
 
 all_df = pd.DataFrame()
-for taxid in mpa_res.index:
-    asms = taxid2asm(taxid,3)
-    for asm in asms:
-        #Load gene regions
-        reference_genome = FastaFile(f'strains/{asm}/{asm}.fna')
-        gene_annot = pd.read_csv(f'strains/{asm}/{asm}_filtered_tss.csv')
-        gene_annot.index = np.array([re.match(r'ID=([^;]*)',x).group(1) for x in gene_annot['Desc']])
-        #Filter short genes
-        gene_annot['len'] = gene_annot['geneRight']-gene_annot['geneLeft']
-        gene_annot = gene_annot[gene_annot['len'] > 500]
-        gene_annot = gene_annot[(gene_annot.Strand == '-') & (gene_annot.Start > 750)] #Incase of fetching beyond start of genome
+for species in tqdm(hmp2_mpa.index):
+    asm = hmp2_genomes[species]
 
-        for samp in samples:
-            if np.isnan(mpa_res.loc[taxid,samp]):
-                continue
-            #Read TPM sample data
-            tpm_file = get_tpm(f'kallisto_res/{asm}_{samp}/abundance.tsv')
-            chrom_map = pd.read_table(f'strains/{asm}/{asm}_filtered_tss.csv', sep = ',', header=0, index_col=0)
-            chrom_map = chrom_map[~chrom_map.index.duplicated(keep='first')]
-            chrom_map = {chrom:re.match(r'ID=(\d*)_',chrom_map.loc[chrom,'Desc']).group(1) for chrom in chrom_map.index}
-            tpm_file.index = [x.replace(x.rsplit('_',1)[0],chrom_map.get(x.rsplit('_',1)[0],'na')) for x in tpm_file.index]
-            tpm_dict = tpm_file.to_dict()
-            gene_annot["tpm"] = [tpm_dict['tpm'].get(x,np.nan)for x in gene_annot.index]
-            
-            #Calc upstream diversity
-            aln_file = pysam.AlignmentFile(f'bams/{asm}_{samp}.sorted.bam', "rb")
-            name_indexed = pysam.IndexedReads(aln_file)
-            name_indexed.build()
-            for read in aln_file.fetch(): #Get read length
-                read_len = len(read.get_forward_sequence())
-                break
-            gene_annot['upstream_diversity'] = [calc_upstream_diversity(x,aln_file,name_indexed,read_len=read_len) for x in np.array(gene_annot)]
-            gene_annot['mapped_reads'] = np.sum([int(x.split('\t')[2]) for x in pysam.idxstats(f'bams/{asm}_{samp}.sorted.bam').split('\n')[:-1]])
-            gene_annot['samp'] = samp
-            gene_annot['asm'] = asm
-            all_df = pd.concat([all_df, gene_annot])
+    #Load gene regions
+    reference_genome = FastaFile(f'refseq_genomes/{asm}/{asm}.fna')
+    gene_annot = pd.read_csv(f'refseq_genomes/{asm}/{asm}_filtered_tss.csv')
+    gene_annot.index = np.array([re.match(r'ID=([^;]*)',x).group(1) for x in gene_annot['Desc']])
+    #Filter short genes
+    gene_annot['len'] = gene_annot['geneRight']-gene_annot['geneLeft']
+    gene_annot = gene_annot[gene_annot['len'] > 500]
+    gene_annot = gene_annot[(gene_annot.Strand == '-') & (gene_annot.Start > 750)] #Incase of fetching beyond start of genome
 
+    for samp in hmp2_samples.keys():
+        if np.isnan(hmp2_mpa.loc[species,samp]):
+            continue
+        #Read TPM sample data
+        tpm_file = get_tpm(f'kallisto_res/{asm}_{samp}/abundance.tsv')
+        chrom_map = pd.read_table(f'refseq_genomes/{asm}/{asm}_filtered_tss.csv', sep = ',', header=0, index_col=0)
+        chrom_map = chrom_map[~chrom_map.index.duplicated(keep='first')]
+        chrom_map = {chrom:re.match(r'ID=(\d*)_',chrom_map.loc[chrom,'Desc']).group(1) for chrom in chrom_map.index}
+        tpm_file.index = [x.replace(x.rsplit('_',1)[0],chrom_map.get(x.rsplit('_',1)[0],'na')) for x in tpm_file.index]
+        tpm_dict = tpm_file.to_dict()
+        gene_annot["tpm"] = [tpm_dict['tpm'].get(x,np.nan)for x in gene_annot.index]
+
+        #Calc upstream diversity
+        aln_file = pysam.AlignmentFile(f'bams/{asm}_{samp}.sorted.bam', "rb")
+        name_indexed = pysam.IndexedReads(aln_file)
+        name_indexed.build()
+        for read in aln_file.fetch(): #Get read length
+            read_len = len(read.get_forward_sequence())
+            break
+        gene_annot['upstream_diversity'] = [calc_upstream_diversity(x,aln_file,name_indexed,read_len=read_len) for x in np.array(gene_annot)]
+        gene_annot['mapped_reads'] = np.sum([int(x.split('\t')[2]) for x in pysam.idxstats(f'bams/{asm}_{samp}.sorted.bam').split('\n')[:-1]])
+        gene_annot['samp'] = samp
+        gene_annot['asm'] = asm
+        gene_annot['species'] = species
+        all_df = pd.concat([all_df, gene_annot])
+        
 all_df = all_df.dropna()
 all_df = all_df[all_df['tpm']>0]
 all_df['mapped_reads'] = [np.sum([int(x.split('\t')[2]) for x in pysam.idxstats(f'bams/{row["asm"]}_{row["samp"]}.sorted.bam').split('\n')[:-1]]) for i,row in all_df.iterrows()]
 all_df['norm_tpm'] = 1000000*all_df['tpm']/all_df['mapped_reads']
 all_df['log_norm_tpm'] = np.log(all_df['norm_tpm'] + 0.001)
-asm_2_species_dict = {x:asm_2_species(x) for x in set(all_df['asm'].tolist())}
-all_df['species'] = all_df['asm'].map(asm_2_species_dict)
-all_df.to_csv('plots/all_sample_species_tpm_vs_hetero.csv')
+all_df.to_csv('plots/hmp2_sample_species_tpm_vs_hetero.csv')
 
+all_df = pd.read_csv('plots/hmp2_sample_species_tpm_vs_hetero.csv', index_col = 0)
 g = sns.regplot(data = all_df, x = 'upstream_diversity', y = 'log_norm_tpm')
-stats.pearsonr(all_df['log_norm_tpm'], all_df['upstream_diversity'])
+print(stats.pearsonr(all_df['log_norm_tpm'], all_df['upstream_diversity']))
 #(-0.10025090230262745, 4.149096420444886e-164)
+# HMP2 (-0.14298772543336633, 0.0)
 
 #for asm in list(set(all_df['asm'])):
 #    for samp in list(set(all_df['samp'])):

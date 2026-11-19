@@ -4,31 +4,10 @@ import re, os
 import numpy as np
 import pyBigWig
 
-
-def taxid2ftp(taxid,n=1):
-    strain = refseq[(refseq['species_taxid']==int(taxid)) & (refseq['assembly_level']=='Complete Genome')]
-    if len(strain) == 0:
-        strain = refseq[(refseq['species_taxid']==int(taxid))]
-    ftp = strain['ftp_path'][:n].tolist()
-    ftp = [re.sub(r'^ftp','https',x) for x in ftp]
-    return(ftp)
-
-def calc_cov(asm, sample, DNA_loc, seq_type):
+def calc_cov(asm, sample, DNA_loc):
     ### Align reads ##
     if not os.path.exists(f'bams/{asm}_{sample}.sorted.bam'):
-        if seq_type == "pacbio":
-            if not os.path.exists(f'strains/{asm}/{asm}.fna.bwt'): #Index for BWA
-                subprocess.call(f'bwa index strains/{asm}/{asm}.fna', shell=True)
-            subprocess.call(f'bwa mem -t 64 -x pacbio strains/{asm}/{asm}.fna {DNA_loc}.fastq.gz |samtools view --threads 64 -b - |samtools sort - -o bams/{asm}_{sample}.sorted.bam --threads 64', shell=True)
-        elif seq_type == "nanopore":
-            if not os.path.exists(f'strains/{asm}/{asm}.fna.bwt'): #Index for BWA
-                subprocess.call(f'bwa index strains/{asm}/{asm}.fna', shell=True)
-            subprocess.call(f'bwa mem -t 64 -x ont2d strains/{asm}/{asm}.fna {DNA_loc}.fastq.gz |samtools view --threads 64 -b - |samtools sort - -o bams/{asm}_{sample}.sorted.bam --threads 64', shell=True)
-        elif seq_type == "illumina":
-            subprocess.call(f'bowtie2 -p 64 -x strains/{asm}/{asm}.fna -1 {DNA_loc}_1.fastq.gz -2 {DNA_loc}_2.fastq.gz |samtools view --threads 64 -b - |samtools sort - -o bams/{asm}_{sample}.sorted.bam --threads 64', shell=True)
-        else:
-            print("Invalid sequence type")
-            return(-1)
+        subprocess.call(f'bowtie2 -p 64 -x strains/{asm}/{asm}.fna -1 {DNA_loc}_1.fastq.gz -2 {DNA_loc}_2.fastq.gz |samtools view --threads 64 -b - |samtools sort - -o bams/{asm}_{sample}.sorted.bam --threads 64', shell=True)
         subprocess.call(f'samtools index bams/{asm}_{sample}.sorted.bam -@ 64', shell = True)
 
     #Get read depth of genome
@@ -112,6 +91,7 @@ def align2nanopore(samp_id, shortread_loc, longread_loc):
             
             
 ###Initialise Data
+refseq = pd.read_table('../src/assembly_summary_refseq.txt', header = 1, low_memory=False)
 with open('matched_dataset_idlist') as f:
     samples = f.read().splitlines()
 samples = [x.split('\t') for x in samples]
@@ -124,12 +104,32 @@ for samp in samples:
 #Read species abundances
 mpa_res = pd.read_table('metaphlan3_res/merged_mpa.txt', comment= '#')
 mpa_res = mpa_res[mpa_res['clade_name'].str.contains("s__")]
-mpa_res.index = [re.match('.*\|([^\|]*)',x).group(1) for x in mpa_res['NCBI_tax_id']]
-mpa_res = mpa_res.drop(columns=['clade_name', 'NCBI_tax_id'])
-mpa_res = mpa_res.loc[(mpa_res > 1).sum(axis=1) > 5,:] # Filter species with atleast 1% abundance in more than 5 samples
-mpa_res[mpa_res < 1] = np.nan
-refseq = pd.read_table('../src/assembly_summary_refseq.txt', header = 1)
+mpa_res.index = [re.match('.*\|([^\|]*)',x).group(1) for x in mpa_res['clade_name']]
+mpa_res = mpa_res.drop(columns=['clade_name','NCBI_tax_id'])
+mpa_res = mpa_res.loc[(mpa_res > 0.5).sum(axis=1) > 5,:] # Filter species with atleast 0.5% abundance in more than 5 samples
+mpa_res = mpa_res.where(mpa_res > 0.5, np.nan)
+mpa_res = mpa_res.rename(index={'s__Bacteroides_vulgatus': 's__Phocaeicola_vulgatus', 's__Eubacterium_hallii':'s__Anaerobutyricum_hallii'})
 
+selected_genomes = dict.fromkeys(mpa_res.index)
+for key in selected_genomes.keys():
+    species_name = re.sub('_', ' ', re.sub('s__','',key))
+    assembly = refseq[
+    (refseq['organism_name'].str.contains(species_name)) &
+    (refseq['refseq_category'].isin(['reference genome', 'representative genome']))
+    ]
+    selected_genomes[key] = assembly['ftp_path'].tolist()
+
+selected_genomes = {'s__Bacteroides_uniformis': 'https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/044/361/425/GCF_044361425.1_ASM4436142v1',
+ 's__Phocaeicola_vulgatus': 'https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/012/825/GCF_000012825.1_ASM1282v1',
+ 's__Alistipes_putredinis': 'https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/154/465/GCF_000154465.1_ASM15446v1',
+ 's__Anaerobutyricum_hallii': 'https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/018/140/635/GCF_018140635.1_ASM1814063v1',
+ 's__Anaerostipes_hadrus': 'https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/030/864/025/GCF_030864025.1_ASM3086402v1',
+ 's__Dorea_longicatena': 'https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/025/150/085/GCF_025150085.1_ASM2515008v1',
+ 's__Fusicatenibacter_saccharivorans': 'https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/027/667/425/GCF_027667425.1_ASM2766742v1',
+ 's__Roseburia_faecis': 'https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/015/550/045/GCF_015550045.1_ASM1555004v1',
+ 's__Faecalibacterium_prausnitzii': 'https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/154/385/GCF_000154385.1_ASM15438v1'}
+
+'''
 #Subset nanopore longreads to reduce reference redundancy and computational speed
 for samp in samples:
     nanopore_loc = f'primary_seq/{samp[2]}'
@@ -141,21 +141,24 @@ for samp in samples:
     if not os.path.exists(f'{nanopore_loc}_100K_prodigal.gff'):
         subprocess.call(f'prodigal -q -p meta -i {nanopore_loc}_100K.fasta -o {nanopore_loc}_100K_prodigal.gff -d {nanopore_loc}_100K_prodigal.fna -f gff', shell= True)
 
-#Merge prodigal gene sequences of all strains - Run after creating all strain folders (below)
+# Generate reference genome (strain) folders
+for ftp in selected_genomes.values():
+    prepare_species_folder(ftp)
+    
+#Merge prodigal gene sequences of all strains - Run after creating all strain folders
 if not os.path.exists('strains/merged_prodigal.fna'):
     subprocess.call('cat strains/*/*_prodigal.fna > strains/merged_prodigal.fna', shell= True)
-
+'''
+    
 #Align reads
 for samp in samples:
     illumina_loc = f'primary_seq/{samp[1]}'
     nanopore_loc = f'primary_seq/{samp[2]}_100K'
-    for taxid in mpa_res.index:
-        if np.isnan(mpa_res.loc[taxid,samp[0]]):
+    for species in mpa_res.index:
+        if np.isnan(mpa_res.loc[species,samp[0]]):
             continue
-        ftps = taxid2ftp(taxid,3)
-        for ftp in ftps:
-            asm = prepare_species_folder(ftp)
-            calc_cov(asm,samp[0],illumina_loc,'illumina')
+        asm = selected_genomes[species].rsplit('/',1)[1]
+        calc_cov(asm,samp[0],illumina_loc)
             
     #Align to nanopore reference
     align2nanopore(samp[0],illumina_loc,nanopore_loc)
@@ -164,7 +167,7 @@ for samp in samples:
     if not os.path.exists(f'minimap_res/{samp[0]}_minimap2.paf'):
         subprocess.call(f'minimap2 strains/merged_prodigal.fna {nanopore_loc}_prodigal.fna > minimap_res/{samp[0]}_minimap2.paf', shell = True)
 
-           
+'''
 #Simulate short reads from long reads
 for samp in samples:
     fna_file = f'primary_seq/{samp[2]}_100K.fasta'
@@ -175,3 +178,4 @@ for samp in samples:
         subprocess.call(f'samtools index bams/{samp[0]}_simu.sorted.bam -@ 64',shell=True)
     if not os.path.exists(f'beds/{samp[0]}_simu.bw'):
         subprocess.call(f'bamCoverage --bam bams/{samp[0]}_simu.sorted.bam -p 64 -o beds/{samp[0]}_simu.bw -of bigwig', shell = True)
+'''

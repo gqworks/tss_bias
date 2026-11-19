@@ -10,21 +10,12 @@ import glob
 import pysam
 from io import StringIO
 from scipy.stats import ttest_rel
-
-def taxid2asm(taxid,n=1):
-    strain = refseq[(refseq['species_taxid']==int(taxid)) & (refseq['assembly_level']=='Complete Genome')]
-    if len(strain) == 0:
-        strain = refseq[(refseq['species_taxid']==int(taxid))]
-    ftp = strain['ftp_path'][:n].tolist()
-    asm = [x.rsplit('/',1)[1] for x in ftp]
-    return(asm)
-
-def asm_2_species(asm):
-    name = refseq[refseq['ftp_path'].str.contains(asm)]['organism_name'].item()
-    return re.match(r'(^[^ ]+ [^ ]+).*',name).group(1)
+from pathlib import Path
 
 def scale_mat(d):
-    return (d-d.mean(axis=1)[:,None]) / d.std(axis=1)[:,None]
+    mean_vals = d.mean(axis=1).to_numpy()
+    std_vals = d.std(axis=1).to_numpy()
+    return (d - mean_vals[:, None]) / std_vals[:, None]
 
 def calc_bias(x):
     left_sum = np.sum(x[:500])
@@ -78,23 +69,51 @@ def add_p_val(ax,lft,rgt,y,h,p):
     ax.text((lft + rgt) * .5, y+h, ('n.s.' if p > 0.15 else 'p < %.2g' if p > 0.001 else 'p < %.1g') % max(p+1e-20, 1e-20), ha='center', va='bottom', color='k')
 
     
-### Read NCBI Refseq table ###
-refseq = pd.read_table('src/assembly_summary_refseq.txt', header = 1)
-
 ### Franzosa dataset (8 metagenomics and metatranscriptomics matched samples) ###
-with open('Franzosa_8_samples') as f:
-    Franzosa_8 = f.read().splitlines()
-Franzosa_8 = {x.split('\t')[0]:x.split('\t')[1] for x in Franzosa_8}
+#with open('Franzosa_8_samples') as f:
+#    Franzosa_8 = f.read().splitlines()
+#Franzosa_8 = {x.split('\t')[0]:x.split('\t')[1] for x in Franzosa_8}
+
+# HMP2 Samples
+with open('sample_lists/hmp2_samples') as f:
+    hmp2_samples = f.read().splitlines()
+hmp2_samples = {x.split('\t')[0]:x.split('\t')[2] for x in hmp2_samples}
+
+#Read species abundances
+mpa_res = pd.read_table('mpa4_res/merged_mpa.txt', comment= '#')
+mpa_res = mpa_res[(mpa_res['clade_name'].str.contains("s__"))&(~mpa_res['clade_name'].str.contains("t__"))]
+mpa_res.index = [re.match('.*\|([^\|]*)',x).group(1) for x in mpa_res['clade_name']]
+mpa_res = mpa_res.drop(columns=['clade_name'])
+
+hmp2_mpa = mpa_res.loc[:,hmp2_samples.keys()]
+hmp2_mpa = hmp2_mpa.loc[((hmp2_mpa > 0.5).sum(axis=1) >= 30),:] # Filter species with atleast 0.5% abundance in atleast 30 samples
+hmp2_mpa = hmp2_mpa.where(hmp2_mpa > 0.5, np.nan)
+
+hmp2_genomes = {'s__Phocaeicola_vulgatus': 'GCF_000012825.1_ASM1282v1',
+ 's__Agathobacter_rectalis': 'GCF_022453685.1_ASM2245368v1',
+ 's__Alistipes_putredinis': 'GCF_000154465.1_ASM15446v1',
+ 's__Faecalibacterium_prausnitzii': 'GCF_000154385.1_ASM15438v1',
+ 's__Bacteroides_uniformis': 'GCF_044361425.1_ASM4436142v1',
+ 's__Parabacteroides_distasonis': 'GCF_018279895.1_ASM1827989v1',
+ 's__Bacteroides_caccae': 'GCF_018292205.1_ASM1829220v1'}
+
+hmp2_taxid = {'s__Phocaeicola_vulgatus': 821,
+ 's__Agathobacter_rectalis': 39491,
+ 's__Alistipes_putredinis': 28117,
+ 's__Faecalibacterium_prausnitzii': 853,
+ 's__Bacteroides_uniformis': 820,
+ 's__Parabacteroides_distasonis': 823,
+ 's__Bacteroides_caccae': 47678}
 
 # Assemble samples
-for sample,path in Franzosa_8.items():
-    subprocess.call(f'ml megahit && megahit -t 64 -1 {path}_1.fastq.gz -2 {path}_2.fastq.gz -o assembled_ref/{sample}', shell = True)
-    subprocess.call(f'bowtie2-build assembled_ref/{sample}/final.contigs.fa assembled_ref/{sample}/final.contigs.fa', shell=True)
-
+#for sample, path in hmp2_samples.items():
+#    subprocess.call(f'ml megahit && megahit -t 64 -1 {path}/{sample}_1.fastq.gz -2 {path}/{sample}_2.fastq.gz -o assembled_ref/{sample}', shell = True)
+#    subprocess.call(f'bowtie2-build assembled_ref/{sample}/final.contigs.fa assembled_ref/{sample}/final.contigs.fa', shell=True)
+'''
 # Align reads to assembled reference and bin
-for sample,path in Franzosa_8.items():
+for sample, path in hmp2_samples.items():
     if not os.path.exists(f'bams/{sample}_assembled_ref.sorted.bam'):
-        subprocess.call(f'bowtie2 -p 64 -x assembled_ref/{sample}/final.contigs.fa -1 {path}_1.fastq.gz -2 {path}_2.fastq.gz |samtools view --threads 64 -b - |samtools sort - -o bams/{sample}_assembled_ref.sorted.bam --threads 64', shell = True)
+        subprocess.call(f'bowtie2 -p 64 -x assembled_ref/{sample}/final.contigs.fa -1 {path}/{sample}_1.fastq.gz -2 {path}/{sample}_2.fastq.gz |samtools view --threads 64 -b - |samtools sort - -o bams/{sample}_assembled_ref.sorted.bam --threads 64', shell = True)
         subprocess.call(f'samtools index bams/{sample}_assembled_ref.sorted.bam -@ 64', shell = True)
 
     # Get read depth of genome
@@ -106,48 +125,86 @@ for sample,path in Franzosa_8.items():
         subprocess.call(f'prodigal -i assembled_ref/{sample}/final.contigs.fa -o assembled_ref/{sample}/prodigal.gff -f gff -p meta -d assembled_ref/{sample}/prodigal.fna', shell = True)
     
     # Bin Contigs
-    subprocess.call(f'ml MetaBAT && jgi_summarize_bam_contig_depths --outputDepth assembled_ref/{sample}/depth.txt bams/{sample}_assembled_ref.sorted.bam', shell = True)
-    subprocess.call(f'ml MetaBAT && metabat2 -t 64 -i assembled_ref/{sample}/final.contigs.fa -a assembled_ref/{sample}/depth.txt -o assembled_ref/{sample}/metabat/bin', shell = True)
+    if not os.path.exists(f'assembled_ref/{sample}/depth.txt'):
+        subprocess.call(f'ml MetaBAT && jgi_summarize_bam_contig_depths --outputDepth assembled_ref/{sample}/depth.txt bams/{sample}_assembled_ref.sorted.bam', shell = True)
+        subprocess.call(f'ml MetaBAT && metabat2 -t 64 -i assembled_ref/{sample}/final.contigs.fa -a assembled_ref/{sample}/depth.txt -o assembled_ref/{sample}/metabat/bin', shell = True)
     
     # Annotate contig bins with Kraken2
     if not os.path.exists(f'assembled_ref/{sample}/kraken_res/'):
         os.mkdir(f'assembled_ref/{sample}/kraken_res/')
     for i in glob.glob(f'assembled_ref/{sample}/metabat/*.fa'):
         bin_no = re.match('.*(bin\.\d+)\.fa',i).group(1)
-        subprocess.call(f'ml ncbi-blast kraken && kraken2 --threads 64 --db /groups/cgsd/hbyao/db/bfv/ --output assembled_ref/{sample}/kraken_res/{bin_no}.kra --report assembled_ref/{sample}/kraken_res/{bin_no}.report {i}', shell = True)  
+        subprocess.call(f'ml ncbi-blast/2.12.0 kraken/2.1.2 && kraken2 --threads 64 --db /groups/cgsd/hbyao/db/bfv/ --output assembled_ref/{sample}/kraken_res/{bin_no}.kra --report assembled_ref/{sample}/kraken_res/{bin_no}.report {i}', shell = True)  
+'''
 
 # Find number of reads aligned
-read_count_df = []
-for sample,path in Franzosa_8.items():
-    bamfile = f'bams/{sample}_assembled_ref.sorted.bam'
-    indStats = pd.read_csv(StringIO(pysam.idxstats(bamfile)), sep = '\t', header = None, names = ['contig', 'length', 'mapped', 'unmapped'])
-    tot_mapped = indStats.mapped.sum()
-    tot_unmapped = indStats.unmapped.sum()
-    read_count_df.append([sample,tot_mapped,tot_unmapped])
-    
-# Get Refseq NCBI genomes
-mpa_res = pd.read_table('metaphlan3_res/merged_mpa.txt', comment= '#')
-mpa_res = mpa_res[mpa_res['clade_name'].str.contains("s__")]
-mpa_res.index = [int(re.match('.*\|([^\|]*)',x).group(1)) for x in mpa_res['NCBI_tax_id']]
-mpa_res = mpa_res.drop(columns=['clade_name', 'NCBI_tax_id'])
-Franzosa_mpa = mpa_res.loc[:,Franzosa_8.keys()]
-Franzosa_mpa = Franzosa_mpa.loc[((Franzosa_mpa > 1).sum(axis=1) >= 5),:] # Filter species with atleast 1% abundance in atleast 5 samples
-Franzosa_mpa[Franzosa_mpa < 1] = np.nan
-Franzosa_mpa = Franzosa_mpa.drop(39491)
+#read_count_df = []
+#for sample,path in hmp2_samples.items():
+#    bamfile = f'bams/{sample}_assembled_ref.sorted.bam'
+#    indStats = pd.read_csv(StringIO(pysam.idxstats(bamfile)), sep = '\t', header = None, names = ['contig', 'length', 'mapped', 'unmapped'])
+#    tot_mapped = indStats.mapped.sum()
+#    tot_unmapped = indStats.unmapped.sum()
+#    read_count_df.append([sample,tot_mapped,tot_unmapped])
 
-# Calculate Bias in bins
-bias_means = []
-for sample in Franzosa_mpa.columns:
+# Checkm2 Bins
+#os.mkdir('checkm2_out')
+for sample in hmp2_mpa.columns:
     bw_contig = pyBigWig.open(f'beds/{sample}_assembled_ref.bw')
     contig_dict = bw_contig.chroms()
-    for taxid in Franzosa_mpa.index:
-        if np.isnan(Franzosa_mpa.loc[taxid,sample]):
+    for species in hmp2_mpa.index:
+        if np.isnan(hmp2_mpa.loc[species,sample]):
             continue
-        asm = taxid2asm(taxid,1)[0]
+        asm = hmp2_genomes[species]
+        taxid = hmp2_taxid[species]
         binno = find_best_bin(taxid,sample)
         if binno == 0:
             print(f'No high quality bin found for {taxid} in {sample}')
             continue
+        bin_loc = f'assembled_ref/{sample}/metabat/{binno}.fa'
+        subprocess.call(f'source activate checkm2 && checkm2 predict --threads 64 --remove_intermediates --input {bin_loc} --output-directory checkm2_out/{sample}_{asm}', shell = True)
+        
+rows = []
+for f in Path("checkm2_out").rglob("quality_report.tsv"):
+    df = pd.read_csv(f, sep="\t")
+    df["source"] = f.parent.name
+    rows.append(df)
+merged = pd.concat(rows, ignore_index=True)
+merged.to_csv("plots/checkm2_merged.csv", index=False)
+merged.boxplot(["Completeness", "Contamination"])
+plt.tight_layout()
+plt.savefig("plots/binning_checkm2_boxplot.pdf", dpi=300, bbox_inches="tight")
+plt.close()
+
+
+# Calculate Bias in bins
+checkm2_res = pd.read_csv("plots/checkm2_merged.csv")
+bias_means = []
+for sample in hmp2_mpa.columns:
+    bw_contig = pyBigWig.open(f'beds/{sample}_assembled_ref.bw')
+    contig_dict = bw_contig.chroms()
+    for species in hmp2_mpa.index:
+        if np.isnan(hmp2_mpa.loc[species,sample]):
+            continue
+        asm = hmp2_genomes[species]
+        taxid = hmp2_taxid[species]
+
+        binno = find_best_bin(taxid,sample)
+        if binno == 0:
+            print(f'No high quality bin found for {taxid} in {sample}')
+            continue
+
+        # CheckM2
+        checkm_dat = checkm2_res[(checkm2_res['source']==f'{sample}_{asm}')&(checkm2_res['Name']==binno)]
+        if len(checkm_dat) != 1:
+            print(f'No checkM data found for {asm} in {sample}')
+            continue
+        
+        completeness = checkm_dat['Completeness'].item()
+        contamination = checkm_dat['Contamination'].item()
+        if (completeness < 90) or contamination > 5:
+            print(f'{binno} does not pass High Quality bin for {asm} in {sample}')
+            continue
+        
         # Reference genome bias
         ref_bias_vec = []
         mat = pd.read_csv(f'matrices/{asm}_{sample}.csv', header = None, index_col = 0)
@@ -193,32 +250,33 @@ for sample in Franzosa_mpa.columns:
         bias_means.append([asm,sample,ref_mean,contig_mean,ref_avg_cv,contig_avg_cv])
         
 bias_means = pd.DataFrame(bias_means)
-bias_means.to_csv("plots/assembled_ref_bias_bins.csv")
+bias_means.to_csv("plots/hmp2_assembled_ref_bias_bins_checkM.csv")
 
-bias_means = pd.read_csv("plots/assembled_ref_bias_bins.csv", index_col = 0)
+bias_means = pd.read_csv("plots/hmp2_assembled_ref_bias_bins.csv", index_col = 0)
 bias_means.columns = ['asm','sample','Reference genome','Assembled reference','Reference genome cv', 'Assembled reference cv']
 sns.boxplot(data=bias_means[['Reference genome','Assembled reference']], showfliers=False, color = 'tab:blue')
-add_p_val(plt,0,1,95,3,ttest_rel(bias_means['Reference genome'],bias_means['Assembled reference']).pvalue) # 0.4178
+add_p_val(plt,0,1,185,3,ttest_rel(bias_means['Reference genome'],bias_means['Assembled reference']).pvalue) # Ttest_relResult(statistic=-2.1892669309449704, pvalue=0.029981782391281703)
 plt.ylabel('Average TSS bias')
-plt.savefig(f"plots/assembled_ref_boxplot_bins.pdf")
+plt.savefig(f"plots/hmp2_assembled_ref_boxplot_bins.pdf")
 plt.clf()
-sns.boxplot(data=bias_means[[4,5]], showfliers=False, color = 'tab:blue')
-add_p_val(plt,0,1,80,3,ttest_rel(bias_means[4],bias_means[5]).pvalue)
-plt.savefig(f"plots/assembled_ref_boxplot_bins_avg_cv.pdf")
+sns.boxplot(data=bias_means[['Reference genome cv', 'Assembled reference cv']], showfliers=False, color = 'tab:blue')
+add_p_val(plt,0,1,260,3,ttest_rel(bias_means['Reference genome cv'],bias_means['Assembled reference cv']).pvalue)
+plt.savefig(f"plots/hmp2_assembled_ref_boxplot_bins_avg_cv.pdf")
 plt.clf()
 
-'''
+
 # Calculate Bias using contigs
 bias_means = []
 mapped_reads = []
-for sample in Franzosa_mpa.columns:
-    for taxid in Franzosa_mpa.index:
-        if np.isnan(Franzosa_mpa.loc[taxid,sample]):
+for sample in hmp2_mpa.columns:
+    for species in hmp2_mpa.index:
+        if np.isnan(hmp2_mpa.loc[species,sample]):
             continue
-        asm = taxid2asm(taxid,1)[0]
+        asm = hmp2_genomes[species]
+        
         # Align Reference genome genes to assembled reference genes in order to match species
         if not os.path.exists(f'minimap_res/{asm}_{sample}_assembled.paf'):
-            subprocess.call(f'minimap2 strains/{asm}/{asm}_prodigal.fna assembled_ref/{sample}/prodigal.fna > minimap_res/{asm}_{sample}_assembled.paf', shell = True)
+            subprocess.call(f'minimap2 refseq_genomes/{asm}/{asm}_prodigal.fna assembled_ref/{sample}/prodigal.fna > minimap_res/{asm}_{sample}_assembled.paf', shell = True)
         
         # Reference genome bias
         ref_bias_vec = []
@@ -243,11 +301,14 @@ for sample in Franzosa_mpa.columns:
         gff_contig['partial'] = [re.match('.*partial=(\d\d)',x).group(1) for x in gff_contig[8]]
         gff_contig['len'] = gff_contig[0].map(contig_dict)
         gff_contig['gene_len'] = gff_contig[4] - gff_contig[3]
-        gff_contig = gff_contig[gff_contig['len']>20000]
+        gff_contig = gff_contig[gff_contig['len']>10000]
         read_set = list(set(gff_contig[0]))
         gff_contig[3] = gff_contig[3] - 1 # change for 0-indexed
         gff_contig[4] = gff_contig[4] - 1 # change for 0-indexed
-
+        
+        if len(read_set) == 0:
+            print(f'Skipping {asm} in sample {sample} due to no sufficient length contigs')
+            continue
         # Filter overlapping genes
         filt_genes = []
         for contig in read_set:
@@ -275,18 +336,16 @@ for sample in Franzosa_mpa.columns:
         bias_means.append([asm,sample,ref_mean,contig_mean])
         mapped_reads.append([asm,sample,ref_no_genes,contig_no_genes,ref_avg_cv,contig_avg_cv])
 bias_means = pd.DataFrame(bias_means)
-bias_means.to_csv("plots/assembled_ref_bias.csv")
+bias_means.to_csv("plots/hmp2_assembled_ref_bias.csv")
 
 mapped_reads = pd.DataFrame(mapped_reads)
 sns.boxplot(data=mapped_reads[[4,5]], showfliers=False, color = 'tab:blue')
 add_p_val(plt,0,1,105,3,ttest_rel(mapped_reads[4],mapped_reads[5]).pvalue)
-plt.savefig(f"plots/assembled_ref_boxplot_avg_cv.pdf")
+plt.savefig(f"plots/hmp2_assembled_ref_boxplot_avg_cv.pdf")
 plt.clf()
 
-#bias_means = pd.read_csv("plots/assembled_ref_bias.csv", header = 0, names = ['asm','sample','ref_bias','contig_bias'])
+bias_means = pd.read_csv("plots/hmp2_assembled_ref_bias.csv", header = 0, names = ['asm','sample','ref_bias','contig_bias'])
 sns.boxplot(data=bias_means, showfliers=False, color = 'tab:blue')
-#plt.ylim(-35, 120)
-add_p_val(plt,0,1,105,3,ttest_rel(bias_means[2],bias_means[3]).pvalue) # Ttest_relResult(statistic=4.0750025977880835, pvalue=0.0003262267921443576)
-plt.savefig(f"plots/assembled_ref_boxplot.pdf")
+add_p_val(plt,0,1,185,5,ttest_rel(bias_means['ref_bias'],bias_means['contig_bias']).pvalue) # Ttest_relResult(statistic=-7.110207413007883, pvalue=9.293765094220285e-12)
+plt.savefig(f"plots/hmp2_assembled_ref_boxplot.pdf")
 plt.clf()
-'''
