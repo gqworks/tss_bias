@@ -1,0 +1,25 @@
+#!/bin/bash
+# Primary Illumina discovery coverage (HMP2).
+# Fill REPLACE_NCI_PROJECT (or export via qsub -v) before submitting.
+#
+#PBS -N tss_cov_hmp2
+#PBS -P REPLACE_NCI_PROJECT
+#PBS -q normal
+#PBS -l ncpus=48
+#PBS -l mem=192GB
+#PBS -l walltime=48:00:00
+#PBS -l storage=gdata/REPLACE_NCI_PROJECT+scratch/REPLACE_NCI_PROJECT
+#PBS -l wd
+#PBS -j oe
+#PBS -o logs/calc_coverage_hmp2.out
+
+# Optional overrides at submit time:
+#   qsub -v TSS_REPO=$HOME/tss_bias,TSS_CONFIG=$HOME/tss_bias/config/gadi.local.yaml,TSS_CONDA_ENV=tss_bias \
+#        jobs/gadi/01_calc_coverage_hmp2.pbs
+
+mkdir -p "${TSS_REPO:-.}/logs"
+# shellcheck source=/dev/null
+source "${TSS_REPO}/jobs/gadi/_common.inc.sh"
+
+# deepTools / prodigal often via conda rather than modules
+python calc_coverage.py --cohort hmp2 --threads "${PBS_NCPUS}"

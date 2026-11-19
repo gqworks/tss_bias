@@ -1,0 +1,12 @@
+# Python stack for plot / matrix analyses (aligners via conda or Gadi modules).
+pandas>=2.0
+numpy>=1.24
+scipy>=1.10
+matplotlib>=3.7
+seaborn>=0.13
+biopython>=1.81
+pysam>=0.21
+pyBigWig>=0.3.22
+statsmodels>=0.14
+tqdm>=4.66
+PyYAML>=6.0

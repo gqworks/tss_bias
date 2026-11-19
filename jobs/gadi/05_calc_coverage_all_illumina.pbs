@@ -1,0 +1,19 @@
+#!/bin/bash
+# Franzosa + HMP2 + alt_illumina (ARG/HYP intersection) coverage generation.
+#
+#PBS -N tss_cov_illum
+#PBS -P REPLACE_NCI_PROJECT
+#PBS -q normal
+#PBS -l ncpus=48
+#PBS -l mem=192GB
+#PBS -l walltime=96:00:00
+#PBS -l storage=gdata/REPLACE_NCI_PROJECT+scratch/REPLACE_NCI_PROJECT
+#PBS -l wd
+#PBS -j oe
+#PBS -o logs/calc_coverage_all_illumina.out
+
+mkdir -p "${TSS_REPO:-.}/logs"
+# shellcheck source=/dev/null
+source "${TSS_REPO}/jobs/gadi/_common.inc.sh"
+
+python calc_coverage.py --all-illumina --threads "${PBS_NCPUS}"

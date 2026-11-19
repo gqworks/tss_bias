@@ -1,0 +1,40 @@
+#!/bin/bash
+# Revision / mechanism analyses (run after matrices+BAMs exist as needed).
+# Toggle steps with RUN_* env vars (default: bias-vs-tpm + platform corr only).
+#
+#PBS -N tss_revision
+#PBS -P REPLACE_NCI_PROJECT
+#PBS -q normal
+#PBS -l ncpus=24
+#PBS -l mem=128GB
+#PBS -l walltime=48:00:00
+#PBS -l storage=gdata/REPLACE_NCI_PROJECT+scratch/REPLACE_NCI_PROJECT
+#PBS -l wd
+#PBS -j oe
+#PBS -o logs/revision_analyses.out
+
+mkdir -p "${TSS_REPO:-.}/logs"
+# shellcheck source=/dev/null
+source "${TSS_REPO}/jobs/gadi/_common.inc.sh"
+
+RUN_BIAS_TPM="${RUN_BIAS_TPM:-1}"
+RUN_PLATFORM="${RUN_PLATFORM:-1}"
+RUN_IS_RNA="${RUN_IS_RNA:-0}"
+RUN_RELAXED="${RUN_RELAXED:-0}"
+RUN_PROMOTECH="${RUN_PROMOTECH:-0}"
+RUN_CONTAINMENT="${RUN_CONTAINMENT:-0}"
+RUN_ASSEMBLED="${RUN_ASSEMBLED:-0}"
+RUN_UPSTREAM="${RUN_UPSTREAM:-0}"
+RUN_LMM_STUB="${RUN_LMM_STUB:-0}"
+
+[[ "${RUN_BIAS_TPM}" == 1 ]] && python plot_bias_vs_tpm.py
+[[ "${RUN_PLATFORM}" == 1 ]] && python plot_bias_corr_platform.py
+[[ "${RUN_IS_RNA}" == 1 ]] && python is_rna_analysis.py
+[[ "${RUN_RELAXED}" == 1 ]] && python relaxed_aligner.py
+[[ "${RUN_PROMOTECH}" == 1 ]] && python compare_promoter_prediction.py
+[[ "${RUN_CONTAINMENT}" == 1 ]] && python containment_hashing.py
+[[ "${RUN_ASSEMBLED}" == 1 ]] && python assembled_ref_bias.py
+[[ "${RUN_UPSTREAM}" == 1 ]] && python upstream_unmapped_read_analysis.py
+[[ "${RUN_LMM_STUB}" == 1 ]] && python scripts/gc_adjusted_lmm.py --help
+
+echo "Done revision job toggles."

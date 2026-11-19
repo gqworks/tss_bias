@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tss-bias"
+version = "0.2.0"
+description = "Metagenomic TSS coverage bias analyses (Gadi-oriented packaging)"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "pandas>=2.0",
+  "numpy>=1.24",
+  "scipy>=1.10",
+  "matplotlib>=3.7",
+  "seaborn>=0.13",
+  "biopython>=1.81",
+  "pysam>=0.21",
+  "pyBigWig>=0.3.22",
+  "statsmodels>=0.14",
+  "tqdm>=4.66",
+  "PyYAML>=6.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0"]
+
+[tool.setuptools.packages.find]
+include = ["tss_bias*"]

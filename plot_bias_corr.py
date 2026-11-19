@@ -8,6 +8,16 @@ import matplotlib.pyplot as plt
 import itertools
 import pyBigWig
 
+
+# --- Gadi/portable bootstrap (added in refactor) ---
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(_Path(__file__).resolve().parent))
+from tss_bias.runtime import bootstrap as _bootstrap, mpa_path as _mpa_path
+_CFG = _bootstrap(chdir_work=False)
+_MPA = _mpa_path(_CFG)
+_HMP2_FQ = _CFG["cohorts"]["hmp2"]["fastq_dir"]
+# --- end bootstrap ---
 def get_cor_mat(asm):
     hmp2_samples_bias = np.array([get_bias_from_mat(asm,samp) for samp in hmp2_samples])
     Franzosa_samples_bias = np.array([get_bias_from_mat(asm,samp) for samp in Franzosa_samples])
@@ -118,32 +128,35 @@ def get_null_mat(asm):
 
 ###Initialise Data
 with open('sample_lists/hmp2_samples') as f:
-    hmp2_samples = f.read().splitlines()
+    hmp2_samples = [ln for ln in f.read().splitlines() if ln.strip() and not ln.startswith('#')]
 hmp2_samples = {x.split('\t')[0]:x.split('\t')[1] for x in hmp2_samples}
 
 with open('sample_lists/Franzosa_8_samples') as f:
-    Franzosa_samples = f.read().splitlines()
-#Franzosa_samples = [x.rsplit('\t',1)[0] for x in Franzosa_samples]
-Franzosa_samples = [x.rsplit('/',1)[1] for x in Franzosa_samples]
+    Franzosa_samples = [ln for ln in f.read().splitlines() if ln.strip() and not ln.startswith('#')]
+# Prefer SRA / second column; fall back to basename of a legacy absolute path
+Franzosa_samples = [
+    (x.split('\t')[1] if '\t' in x else x.rsplit('/', 1)[-1]) for x in Franzosa_samples
+]
 
 with open('sample_lists/arg_samples') as f:
-    arg_samples = f.read().splitlines()
+    arg_samples = [ln for ln in f.read().splitlines() if ln.strip() and not ln.startswith('#')]
 arg_samples = [x.rsplit('\t',1)[0] for x in arg_samples]
 
 with open('sample_lists/hyp_samples') as f:
-    hyp_samples = f.read().splitlines()
+    hyp_samples = [ln for ln in f.read().splitlines() if ln.strip() and not ln.startswith('#')]
 hyp_samples = [x.rsplit('\t',1)[0] for x in hyp_samples]
 
 #Read species abundances
-mpa_res = pd.read_table('mpa4_res/merged_mpa.txt', comment= '#')
+mpa_res = pd.read_table(_MPA, comment= '#')
 mpa_res = mpa_res[(mpa_res['clade_name'].str.contains("s__"))&(~mpa_res['clade_name'].str.contains("t__"))]
 mpa_res.index = [re.match('.*\|([^\|]*)',x).group(1) for x in mpa_res['clade_name']]
 mpa_res = mpa_res.drop(columns=['clade_name','NCBI_tax_id'])
 # Filter species with atleast 0.5% abundance in atleast 5 samples in each dataset
-mpa_res = mpa_res.loc[((mpa_res[Franzosa_samples] > 0.5).sum(axis=1) >= 5) & 
-                      ((mpa_res[hmp2_samples] > 0.5).sum(axis=1) >= 30) &
-                      ((mpa_res[arg_samples] > 0.5).sum(axis=1) >= 5) & 
-                      ((mpa_res[hyp_samples] > 0.5).sum(axis=1) >= 5),:]
+_hmp2_ids = list(hmp2_samples.keys()) if isinstance(hmp2_samples, dict) else list(hmp2_samples)
+mpa_res = mpa_res.loc[((mpa_res[Franzosa_samples] > 0.5).sum(axis=1) >= 5) &
+                      ((mpa_res[_hmp2_ids] > 0.5).sum(axis=1) >= 30) &
+                      ((mpa_res[arg_samples] > 0.5).sum(axis=1) >= 5) &
+                      ((mpa_res[hyp_samples] > 0.5).sum(axis=1) >= 5), :]
 mpa_res = mpa_res.where(mpa_res > 0.5, np.nan)
 
 all_genomes = {'s__Phocaeicola_vulgatus': 'GCF_000012825.1_ASM1282v1',

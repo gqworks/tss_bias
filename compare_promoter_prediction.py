@@ -8,6 +8,16 @@ import seaborn as sns
 import statsmodels.stats.multitest as multi
 import subprocess
 
+
+# --- Gadi/portable bootstrap (added in refactor) ---
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(_Path(__file__).resolve().parent))
+from tss_bias.runtime import bootstrap as _bootstrap, mpa_path as _mpa_path
+_CFG = _bootstrap(chdir_work=False)
+_MPA = _mpa_path(_CFG)
+_HMP2_FQ = _CFG["cohorts"]["hmp2"]["fastq_dir"]
+# --- end bootstrap ---
 def get_gc_null(tss_dat_np,fasta_sequences):
     null_gc = []
     for chrom in list(set(tss_dat_np[:,0])):
@@ -106,11 +116,11 @@ selected_genomes =  ['GCF_002586945.1_ASM258694v1', # 853 Faecalibacterium praus
                      'GCF_018289375.1_ASM1828937v1'] # Bacteroides uniformis
 '''
 with open('sample_lists/hmp2_samples') as f:
-    hmp2_samples = f.read().splitlines()
-hmp2_samples = {x.split('\t')[0]:x.split('\t')[2] for x in hmp2_samples}
+    hmp2_samples = [ln for ln in f.read().splitlines() if ln.strip() and not ln.startswith('#')]
+hmp2_samples = {x.split('\t')[0]: _HMP2_FQ for x in hmp2_samples}
 
 #Read species abundances
-mpa_res = pd.read_table('mpa4_res/merged_mpa.txt', comment= '#')
+mpa_res = pd.read_table(_MPA, comment= '#')
 mpa_res = mpa_res[(mpa_res['clade_name'].str.contains("s__"))&(~mpa_res['clade_name'].str.contains("t__"))]
 mpa_res.index = [re.match('.*\|([^\|]*)',x).group(1) for x in mpa_res['clade_name']]
 mpa_res = mpa_res.drop(columns=['clade_name'])
@@ -132,9 +142,17 @@ all_dat = []
 all_differences = []
 for species, asm in hmp2_genomes.items():
     if not os.path.exists(f'promotech_res/{asm}'):
-        subprocess.call([f'source activate promotech_env && python /home/gordonq/Promotech-master/promotech.py -pg -m RF-HOT -f refseq_genomes/{asm}/{asm}.fna -o promotech_res/{asm}'], shell = True)
-    if not os.path.exists(f'promotech_res/{asm}/genome_predictions.csv'):
-        subprocess.call([f'source activate promotech_env && cd /home/gordonq/Promotech-master && python /home/gordonq/Promotech-master/promotech.py -g -t 0.7 -m RF-HOT -i /groups/cgsd/gordonq/TSS_depth/main/promotech_res/{asm} -o /groups/cgsd/gordonq/TSS_depth/main/promotech_res/{asm}'], shell = True)
+        promotech_home = _CFG.get('software', {}).get('promotech_home') or os.environ.get('PROMOTECH_HOME', '')
+        promotech_env = _CFG.get('software', {}).get('promotech_env', 'promotech_env')
+        promotech_out = _CFG['paths'].get('promotech_dir', 'promotech_res')
+        if not promotech_home:
+            raise RuntimeError('Set software.promotech_home in config or PROMOTECH_HOME env to run Promotech')
+        subprocess.call([f'source activate {promotech_env} && python {promotech_home}/promotech.py -pg -m RF-HOT -f refseq_genomes/{asm}/{asm}.fna -o {promotech_out}/{asm}'], shell = True)
+    if not os.path.exists(f"{_CFG['paths'].get('promotech_dir', 'promotech_res')}/{asm}/genome_predictions.csv"):
+        promotech_home = _CFG.get('software', {}).get('promotech_home') or os.environ.get('PROMOTECH_HOME', '')
+        promotech_env = _CFG.get('software', {}).get('promotech_env', 'promotech_env')
+        promotech_out = os.path.abspath(_CFG['paths'].get('promotech_dir', 'promotech_res'))
+        subprocess.call([f'source activate {promotech_env} && cd {promotech_home} && python {promotech_home}/promotech.py -g -t 0.7 -m RF-HOT -i {promotech_out}/{asm} -o {promotech_out}/{asm}'], shell = True)
 
     ### Prepare predicted promoters ###
     tss_dat = pd.read_csv(f'promotech_res/{asm}/genome_predictions.csv', sep = '\t')
