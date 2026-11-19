@@ -1,0 +1,36 @@
+#PBS -l nodes=1:ppn=4
+#PBS -l mem=16gb
+#PBS -l walltime=24:00:00
+#PBS -q cgsd
+
+cd $PBS_O_WORKDIR
+
+# PacBio HiFi Reads
+wget -nc ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR116/071/SRR11606871/SRR11606871_subreads.fastq.gz
+
+# Illumina Reads
+wget -nc ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR835/003/SRR8359173/SRR8359173_1.fastq.gz
+wget -nc ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR835/003/SRR8359173/SRR8359173_2.fastq.gz
+
+
+# Reference Genomes
+wget -nc https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/012/825/GCF_000012825.1_ASM1282v1/GCF_000012825.1_ASM1282v1_genomic.fna.gz #Phocaeicola vulgatus ATCC 8482
+wget -nc https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/010/425/GCF_000010425.1_ASM1042v1/GCF_000010425.1_ASM1042v1_genomic.fna.gz #Bifidobacterium adolescentis ATCC 15703
+wget -nc https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/020/546/685/GCF_020546685.1_ASM2054668v1/GCF_020546685.1_ASM2054668v1_genomic.fna.gz #Deinococcus radiodurans ATCC BAA816
+wget -nc https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/172/575/GCF_000172575.2_ASM17257v2/GCF_000172575.2_ASM17257v2_genomic.fna.gz #Enterococcus faecalis ATCC 47077
+wget -nc https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/154/225/GCF_000154225.1_ASM15422v1/GCF_000154225.1_ASM15422v1_genomic.fna.gz #Schaalia odontolytica ATCC_17982
+wget -nc https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/013/372/085/GCF_013372085.1_ASM1337208v1/GCF_013372085.1_ASM1337208v1_genomic.fna.gz #Acinetobacter baumannii ATCC_17978
+wget -nc https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/231/215/GCF_000231215.1_ASM23121v1/GCF_000231215.1_ASM23121v1_genomic.fna.gz #Cutibacterium acnes ATCC_11828 
+wget -nc https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/307/795/GCF_000307795.1_ASM30779v1/GCF_000307795.1_ASM30779v1_genomic.fna.gz #Helicobacter pylori ATCC_700392
+wget -nc https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/014/425/GCF_000014425.1_ASM1442v1/GCF_000014425.1_ASM1442v1_genomic.fna.gz #Lactobacillus gasseri ATCC_33323
+wget -nc https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/008/805/GCF_000008805.1_ASM880v1/GCF_000008805.1_ASM880v1_genomic.fna.gz #Neisseria meningitidis ATCC_BAA335
+wget -nc https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/008/005/GCF_000008005.1_ASM800v1/GCF_000008005.1_ASM800v1_genomic.fna.gz #Bacillus cereus
+wget -nc https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/767/745/GCF_000767745.1_ASM76774v1/GCF_000767745.1_ASM76774v1_genomic.fna.gz #Clostridium beijerinckii
+wget -nc https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/006/765/GCF_000006765.1_ASM676v1/GCF_000006765.1_ASM676v1_genomic.fna.gz #Pseudomonas aeruginosa
+wget -nc https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/013/465/GCF_000013465.1_ASM1346v1/GCF_000013465.1_ASM1346v1_genomic.fna.gz #Staphylococcus aureus
+wget -nc https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/007/265/GCF_000007265.1_ASM726v1/GCF_000007265.1_ASM726v1_genomic.fna.gz #Streptococcus agalactiae
+wget -nc https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/335/055/GCF_000335055.2_ASM33505v2/GCF_000335055.2_ASM33505v2_genomic.fna.gz #Escherichia coli
+wget -nc https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/010/505/GCF_000010505.1_ASM1050v1/GCF_000010505.1_ASM1050v1_genomic.fna.gz #Porphyromonas gingivalis
+wget -nc https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/015/985/GCF_000015985.1_ASM1598v1/GCF_000015985.1_ASM1598v1_genomic.fna.gz #Rhodobacter sphaeroides
+wget -nc https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/007/645/GCF_000007645.1_ASM764v1/GCF_000007645.1_ASM764v1_genomic.fna.gz #Staphylococcus epidermidis
+wget -nc https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/007/465/GCF_000007465.2_ASM746v2/GCF_000007465.2_ASM746v2_genomic.fna.gz Streptococcus mutans
