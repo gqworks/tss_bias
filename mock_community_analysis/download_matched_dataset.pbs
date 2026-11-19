@@ -1,0 +1,31 @@
+#PBS -l nodes=1:ppn=4
+#PBS -l mem=16gb
+#PBS -l walltime=24:00:00
+#PBS -q cgsd
+
+cd $PBS_O_WORKDIR
+
+# Nanopore Reads
+fasterq-dump --threads 64 SRR18490957 -O primary_seq # CD100
+fasterq-dump --threads 64 SRR18490958 -O primary_seq # CD99 
+fasterq-dump --threads 64 SRR18490959 -O primary_seq # CD98 
+fasterq-dump --threads 64 SRR18490960 -O primary_seq # CD97 
+fasterq-dump --threads 64 SRR18490961 -O primary_seq # CD96
+fasterq-dump --threads 64 SRR18490962 -O primary_seq # CD95
+fasterq-dump --threads 64 SRR18490963 -O primary_seq # CD94
+fasterq-dump --threads 64 SRR18490964 -O primary_seq # CD93
+fasterq-dump --threads 64 SRR18490965 -O primary_seq # CD92
+fasterq-dump --threads 64 SRR18490966 -O primary_seq # CD91
+
+
+# Illumina Reads
+fasterq-dump --threads 64 --split-files SRR18491235 -O primary_seq # CD100
+fasterq-dump --threads 64 --split-files SRR18491236 -O primary_seq # CD99 
+fasterq-dump --threads 64 --split-files SRR18491238 -O primary_seq # CD98 
+fasterq-dump --threads 64 --split-files SRR18491239 -O primary_seq # CD97 
+fasterq-dump --threads 64 --split-files SRR18491240 -O primary_seq # CD96
+fasterq-dump --threads 64 --split-files SRR18491241 -O primary_seq # CD95
+fasterq-dump --threads 64 --split-files SRR18491242 -O primary_seq # CD94
+fasterq-dump --threads 64 --split-files SRR18491243 -O primary_seq # CD93
+fasterq-dump --threads 64 --split-files SRR18491244 -O primary_seq # CD92
+fasterq-dump --threads 64 --split-files SRR18491245 -O primary_seq # CD91

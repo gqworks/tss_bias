@@ -1,0 +1,15 @@
+#PBS -l nodes=1:ppn=64
+#PBS -l mem=128gb
+#PBS -l walltime=16:00:00
+#PBS -q cgsd
+
+cd $PBS_O_WORKDIR
+
+while read -r sample DNA_loc; do
+	if [ -f "mpa4_res/${sample}.txt" ]; then
+        echo "Output for ${sample} exists, skipping..."
+        continue
+    fi
+	metaphlan --input_type fastq --nproc 64 --mapout mpa4_res/${sample}.bowtie2.bz2 ${DNA_loc}/${sample}_1.fastq.gz,${DNA_loc}/${sample}_1.fastq.gz -o mpa4_res/${sample}.txt
+done < $idlist
+

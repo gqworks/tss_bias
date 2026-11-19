@@ -8,37 +8,41 @@ import matplotlib.pyplot as plt
 import itertools
 import pyBigWig
 
-def taxid2asm(taxid,n=1):
-    strain = refseq[(refseq['species_taxid']==int(taxid)) & (refseq['assembly_level']=='Complete Genome')]
-    if len(strain) == 0:
-        strain = refseq[(refseq['species_taxid']==int(taxid))]
-    ftp = strain['ftp_path'][:n].tolist()
-    asm = [x.rsplit('/',1)[1] for x in ftp]
-    return(asm)
-
 def get_cor_mat(asm):
+    hmp2_samples_bias = np.array([get_bias_from_mat(asm,samp) for samp in hmp2_samples])
     Franzosa_samples_bias = np.array([get_bias_from_mat(asm,samp) for samp in Franzosa_samples])
     arg_samples_bias = np.array([get_bias_from_mat(asm,samp) for samp in arg_samples])
     hyp_samples_bias = np.array([get_bias_from_mat(asm,samp) for samp in hyp_samples])
+    
+    hmp2_samples_bias = hmp2_samples_bias[[False if len(x)==1 else True for x in hmp2_samples_bias]]
     Franzosa_samples_bias = Franzosa_samples_bias[[False if len(x)==1 else True for x in Franzosa_samples_bias]]
     arg_samples_bias = arg_samples_bias[[False if len(x)==1 else True for x in arg_samples_bias]]
     hyp_samples_bias = hyp_samples_bias[[False if len(x)==1 else True for x in hyp_samples_bias]]
-    all_bias_groups = [Franzosa_samples_bias,arg_samples_bias,hyp_samples_bias]
-    heatmap_vals = []
+    all_bias_groups = [hmp2_samples_bias,Franzosa_samples_bias,arg_samples_bias,hyp_samples_bias]
+    cor_vals = []
+    p_vals = []
     for x in all_bias_groups:
         for y in all_bias_groups:
-            heatmap_vals.append(get_avg_r(x,y))
-    cor_mat = np.array(heatmap_vals).reshape(3,3)
-    return(cor_mat)
+            avg_r, avg_p = get_avg_r_p(x, y)
+            cor_vals.append(avg_r)
+            p_vals.append(avg_p)
+    cor_mat = np.array(cor_vals).reshape(4,4)
+    p_mat = np.array(p_vals).reshape(4,4)
+    return cor_mat, p_mat
 
-def get_avg_r(a,b):
+def get_avg_r_p(a,b):
     r_vals = []
+    p_vals = []
     for r in itertools.product(a, b):
         nan = np.isnan(r[0]) | np.isnan(r[1])
-        if np.array_equal(r[0][~nan], r[1][~nan]):
+        clean_x = r[0][~nan]
+        clean_y = r[1][~nan]
+        if len(clean_x) < 2 or np.array_equal(clean_x, clean_y):
             continue
-        r_vals.append(np.corrcoef(r[0][~nan],r[1][~nan])[0][1])
-    return np.mean(r_vals)
+        corr_r, corr_p = stats.pearsonr(clean_x, clean_y)
+        r_vals.append(corr_r)
+        p_vals.append(corr_p)
+    return np.mean(r_vals), np.mean(p_vals)
 
 def get_bias_from_mat(asm,sample):
     if not os.path.exists(f'matrices/{asm}_{sample}.csv'):
@@ -88,97 +92,132 @@ def get_null_bias_from_mat(asm,samp,annot):
     return bias
 
 def get_null_mat(asm):
-    tss_dat = pd.read_csv(f'strains/{asm}/{asm}_filtered_tss.csv')
+    tss_dat = pd.read_csv(f'refseq_genomes/{asm}/{asm}_filtered_tss.csv')
+    hmp2_samples_bias = np.array([get_null_bias_from_mat(asm,samp,tss_dat) for samp in hmp2_samples])
     Franzosa_samples_bias = np.array([get_null_bias_from_mat(asm,samp,tss_dat) for samp in Franzosa_samples])
     arg_samples_bias = np.array([get_null_bias_from_mat(asm,samp,tss_dat) for samp in arg_samples])
     hyp_samples_bias = np.array([get_null_bias_from_mat(asm,samp,tss_dat) for samp in hyp_samples])
+    
+    hmp2_samples_bias = hmp2_samples_bias[[False if len(x)==1 else True for x in hmp2_samples_bias]]
     Franzosa_samples_bias = Franzosa_samples_bias[[False if len(x)==1 else True for x in Franzosa_samples_bias]]
     arg_samples_bias = arg_samples_bias[[False if len(x)==1 else True for x in arg_samples_bias]]
     hyp_samples_bias = hyp_samples_bias[[False if len(x)==1 else True for x in hyp_samples_bias]]
-    null_bias_groups = [Franzosa_samples_bias,arg_samples_bias,hyp_samples_bias]
-    heatmap_vals = []
+    null_bias_groups = [hmp2_samples_bias,Franzosa_samples_bias,arg_samples_bias,hyp_samples_bias]
+    cor_vals = []
+    p_vals = []
     for x in null_bias_groups:
         for y in null_bias_groups:
-            heatmap_vals.append(get_avg_r(x,y))
-    cor_mat = np.array(heatmap_vals).reshape(3,3)
-    return(cor_mat)
+            avg_r, avg_p = get_avg_r_p(x, y)
+            cor_vals.append(avg_r)
+            p_vals.append(avg_p)
+    cor_mat = np.array(cor_vals).reshape(4,4)
+    p_mat = np.array(p_vals).reshape(4,4)
+    return cor_mat, p_mat
 
 
 
 ###Initialise Data
-with open('Franzosa_8_samples') as f:
-    Franzosa_samples = f.read().splitlines()
-Franzosa_samples = [x.rsplit('\t',1)[0] for x in Franzosa_samples]
+with open('sample_lists/hmp2_samples') as f:
+    hmp2_samples = f.read().splitlines()
+hmp2_samples = {x.split('\t')[0]:x.split('\t')[1] for x in hmp2_samples}
 
-with open('arg_samples') as f:
+with open('sample_lists/Franzosa_8_samples') as f:
+    Franzosa_samples = f.read().splitlines()
+#Franzosa_samples = [x.rsplit('\t',1)[0] for x in Franzosa_samples]
+Franzosa_samples = [x.rsplit('/',1)[1] for x in Franzosa_samples]
+
+with open('sample_lists/arg_samples') as f:
     arg_samples = f.read().splitlines()
 arg_samples = [x.rsplit('\t',1)[0] for x in arg_samples]
 
-with open('hyp_samples') as f:
+with open('sample_lists/hyp_samples') as f:
     hyp_samples = f.read().splitlines()
 hyp_samples = [x.rsplit('\t',1)[0] for x in hyp_samples]
 
 #Read species abundances
-mpa_res = pd.read_table('metaphlan3_res/merged_mpa.txt', comment= '#')
-mpa_res = mpa_res[mpa_res['clade_name'].str.contains("s__")]
-mpa_res.index = [re.match('.*\|([^\|]*)',x).group(1) for x in mpa_res['NCBI_tax_id']]
-mpa_res = mpa_res.drop(columns=['clade_name', 'NCBI_tax_id'])
-# Filter species with atleast 1% abundance in atleast 5 samples in each dataset
-mpa_res = mpa_res.loc[((mpa_res[Franzosa_samples] > 1).sum(axis=1) >= 5) & ((mpa_res[arg_samples] > 1).sum(axis=1) >= 5) & ((mpa_res[hyp_samples] > 1).sum(axis=1) >= 5),:]
-mpa_res[mpa_res < 1] = np.nan
-mpa_res = mpa_res.drop('39491') #Remove Eubacterium Rectale because no reference genome in refseq
+mpa_res = pd.read_table('mpa4_res/merged_mpa.txt', comment= '#')
+mpa_res = mpa_res[(mpa_res['clade_name'].str.contains("s__"))&(~mpa_res['clade_name'].str.contains("t__"))]
+mpa_res.index = [re.match('.*\|([^\|]*)',x).group(1) for x in mpa_res['clade_name']]
+mpa_res = mpa_res.drop(columns=['clade_name','NCBI_tax_id'])
+# Filter species with atleast 0.5% abundance in atleast 5 samples in each dataset
+mpa_res = mpa_res.loc[((mpa_res[Franzosa_samples] > 0.5).sum(axis=1) >= 5) & 
+                      ((mpa_res[hmp2_samples] > 0.5).sum(axis=1) >= 30) &
+                      ((mpa_res[arg_samples] > 0.5).sum(axis=1) >= 5) & 
+                      ((mpa_res[hyp_samples] > 0.5).sum(axis=1) >= 5),:]
+mpa_res = mpa_res.where(mpa_res > 0.5, np.nan)
 
-refseq = pd.read_table('src/assembly_summary_refseq.txt', header = 1)
+all_genomes = {'s__Phocaeicola_vulgatus': 'GCF_000012825.1_ASM1282v1',
+ 's__Agathobacter_rectalis': 'GCF_022453685.1_ASM2245368v1',
+ 's__Alistipes_putredinis': 'GCF_000154465.1_ASM15446v1',
+ 's__Faecalibacterium_prausnitzii': 'GCF_000154385.1_ASM15438v1',
+ 's__Bacteroides_uniformis': 'GCF_044361425.1_ASM4436142v1'}
 
-all_spe_mat = np.array([[0]*3]*3)
-axis_labels = ['matched','ARG','HYP']
+
+all_spe_mat = np.zeros((4, 4))
+all_p_mat = np.zeros((4, 4))
+axis_labels = ['HMP2','Franzosa','ARG','HYP']
 diag = []
 triangle = []
-for taxid in tqdm(mpa_res.index):
-    asms = taxid2asm(taxid,3)
-    cor_mat = np.array([[0]*3]*3)
-    for asm in asms:
-        cor_mat = cor_mat + get_cor_mat(asm)
-    cor_mat = cor_mat/len(asms)
-    all_spe_mat = all_spe_mat + cor_mat
+for species in  all_genomes.keys():
+    asm = all_genomes[species]
+    cor_mat, p_mat = get_cor_mat(asm)
+    p_mat = (p_mat < 0.05).astype(int)
+    all_spe_mat += cor_mat
+    all_p_mat += p_mat
     diag.append(cor_mat.diagonal())
     triangle.append(cor_mat[np.triu(cor_mat, k =1)!=0])
     g = sns.heatmap(cor_mat, xticklabels=axis_labels, yticklabels=axis_labels,vmin=0)
-    g.set_title(taxid)
-    g.figure.savefig(f"plots/correlation_heatmaps/illumina_data_comparison_{taxid}.png")
+    g.set_title(species)
+    g.figure.savefig(f"plots/correlation_heatmaps/illumina_dataset_comparison_{species}_78.png")
     plt.clf()
-all_spe_mat = all_spe_mat/len(mpa_res)
-g = sns.heatmap(all_spe_mat, xticklabels=axis_labels, yticklabels=axis_labels,vmax = 0.8, vmin=0, cmap="Oranges")
-g.set_title("4 species average")
-g.figure.savefig(f"plots/correlation_heatmaps/illuminua_dataset_comparison_all.pdf")
+all_spe_mat /= len(all_genomes)
+all_p_mat = all_p_mat.astype(int) 
+fig, ax = plt.subplots(figsize=(8, 6))
+g = sns.heatmap(all_spe_mat, xticklabels=axis_labels, yticklabels=axis_labels,vmax = 0.8, vmin=0, cmap="Oranges",
+               annot = all_p_mat, fmt='d', annot_kws={'size':12}, ax=ax)
+g.set_title("5 species average")
+g.figure.savefig(f"plots/correlation_heatmaps/illumina_dataset_comparison_hmp2_78.pdf")
 plt.clf() 
 
 diag = all_spe_mat.diagonal()
-diag.mean() #0.345664292477652
-diag.std() #0.030740803371698006
+diag.mean() # 0.36843026334046935
+diag.std() # 0.0677569273553093
 
 triangle = all_spe_mat[np.triu(all_spe_mat, k =1)!=0]
-triangle.mean() # 0.2987134763291012
-triangle.std() # 0.023134904046383655
-stats.ttest_ind(diag, triangle) #Ttest_indResult(statistic=1.7258176090272515, pvalue=0.1594608070751777)
+triangle.mean() # 0.26496918025217003
+triangle.std() # 0.0414803198608098
+stats.ttest_ind(diag, triangle) # Ttest_indResult(statistic=2.6765768715298925, pvalue=0.028074557008736664)
 
 ### Get Null ###
-all_spe_mat = np.array([[0]*3]*3)
-axis_labels = ['matched','ARG','HYP']
-for taxid in tqdm(mpa_res.index):
-    asms = taxid2asm(taxid,3)
-    cor_mat = np.array([[0]*3]*3)
-    for asm in asms:
-        cor_mat = cor_mat + get_null_mat(asm)
-    cor_mat = cor_mat/len(asms)
-    all_spe_mat = all_spe_mat + cor_mat
-all_spe_mat = all_spe_mat/len(mpa_res)
+all_spe_mat = np.zeros((4, 4))
+all_p_mat = np.zeros((4, 4))
+axis_labels = ['HMP2','Franzosa','ARG','HYP']
+for species in  all_genomes.keys():
+    asm = all_genomes[species]
+    cor_mat, p_mat = get_null_mat(asm)
+    p_mat = (p_mat < 0.05).astype(int)
+    all_spe_mat += cor_mat
+    all_p_mat += p_mat
+all_spe_mat /= len(all_genomes)
 all_spe_mat = abs(all_spe_mat)
-g = sns.heatmap(all_spe_mat, xticklabels=axis_labels, yticklabels=axis_labels,vmax = 0.8, vmin=0, cmap="Oranges")
+all_p_mat = all_p_mat.astype(int) 
+fig, ax = plt.subplots(figsize=(8, 6))
+g = sns.heatmap(all_spe_mat, xticklabels=axis_labels, yticklabels=axis_labels,vmax = 0.8, vmin=0, cmap="Oranges", annot = all_p_mat, fmt='d', annot_kws={'size':12}, ax=ax)
 g.set_title("Null species average")
-g.figure.savefig(f"plots/correlation_heatmaps/illumina_dataset_comparison_all_null.pdf")
+g.figure.savefig(f"plots/correlation_heatmaps/illumina_dataset_comparison_hmp2_78_null.pdf")
 plt.clf() 
 
-all_spe_mat.mean() # 0.00027055032813890146
-all_spe_mat.std() # 0.0008381293685912436
+all_spe_mat.mean() # 0.0008986888560413867
+all_spe_mat.std() # 0.0005564765835261918
  
+null_diag = all_spe_mat.diagonal()
+null_diag.mean() # 0.0011232751153674616
+null_diag.std() # 0.0009434070684256246
+
+null_triangle = all_spe_mat[np.triu(all_spe_mat, k =1)!=0]
+null_triangle.mean() # 0.0012638908500645655
+null_triangle.std() # 0.0008115640543393425
+stats.ttest_ind(null_diag, null_triangle) # Ttest_indResult(statistic=-0.22480712575119202, pvalue=0.8277651370569676)
+
+stats.ttest_ind(diag, null_diag) # Ttest_indResult(statistic=9.388452704113645, pvalue=8.290906093578645e-05)
+stats.ttest_ind(triangle, null_triangle) # Ttest_indResult(statistic=14.212767132507427, pvalue=5.86284876915737e-08)
