@@ -1,0 +1,124 @@
+# Default configuration for NCI Gadi (and local) runs.
+# Copy to config/gadi.local.yaml, set project + paths, then:
+#   export TSS_CONFIG=$PWD/config/gadi.local.yaml
+# Or override with env: TSS_DATA_ROOT, TSS_SCRATCH_ROOT, TSS_PROJECT
+
+gadi:
+  project: "ab12"   # e.g. ab12 — REQUIRED before qsub
+  # storage directive example used in jobs/gadi/*.pbs:
+  #   storage: "gdata/ab12+scratch/ab12"
+  queue: "normal"
+  walltime_default: "24:00:00"
+  ncpus_default: 48
+  mem_default: "192GB"
+
+paths:
+  # Roots — set these for your allocation. Placeholders expand after load.
+  data_root: "/g/data/{project}/tss_bias"
+  scratch_root: "/scratch/{project}/tss_bias"
+  work_root: "{data_root}"
+  # Durable outputs on gdata (or local workdir)
+  refseq_dir: "{work_root}/refseq_genomes"
+  matrices_dir: "{work_root}/matrices"
+  beds_dir: "{work_root}/beds"
+  plots_dir: "{work_root}/plots"
+  mpa_dir: "{work_root}/mpa4_res"
+  mpa_merged: "{work_root}/mpa4_res/merged_mpa.txt"
+  kallisto_dir: "{work_root}/kallisto_res"
+  assembled_ref_dir: "{work_root}/assembled_ref"
+  promotech_dir: "{work_root}/promotech_res"
+  sketches_dir: "{work_root}/sketches"
+  # Scratch for large intermediates
+  bams_dir: "{scratch_root}/bams"
+  fastq_scratch: "{scratch_root}/fastq"
+  # In-repo manifests / reference tables
+  sample_lists_dir: "{repo_root}/data/sample_lists"
+  reference_dir: "{repo_root}/data/reference"
+  # Optional NCBI sidecars (not shipped; download if re-enabling live RefSeq lookup)
+  assembly_summary: "{work_root}/refseq_meta/assembly_summary_refseq.txt"
+  names_dmp: "{work_root}/refseq_meta/names.dmp"
+
+# External tools / DBs (machine-local — fill on Gadi)
+software:
+  promotech_home: "${PROMOTECH_HOME:-}"
+  promotech_env: "promotech_env"
+  kraken_db: "${KRAKEN_DB:-}"
+  metaphlan_db: "${METAPHLAN_DB:-}"
+  art_module: "art"          # Gadi module name placeholder; was HKU `ml ART`
+  threads_hint: 48
+
+reference_files:
+  pacbio_mpa: "pacbio_merged_mpa.tsv"
+  nanopore_mpa: "nanopore_merged_mpa.tsv"
+  promotech_example: "promotech_genome_predictions.csv"
+
+cohorts:
+  hmp2:
+    sample_list: "hmp2_samples"
+    fastq_dir: "{data_root}/fastq/hmp2"
+    seq_type: "illumina"
+    abundance_min_pct: 0.5
+    abundance_min_samples: 30
+    species_set: "hmp2"
+    bioproject: "PRJNA389280"
+  franzosa:
+    sample_list: "franzosa_RNALater_samples"
+    fastq_dir: "{data_root}/fastq/franzosa"
+    seq_type: "illumina"
+    abundance_min_pct: 0.5
+    abundance_min_samples: 5
+    species_set: "franzosa"
+  arg:
+    sample_list: "arg_samples"
+    fastq_dir: "{data_root}/fastq/arg"
+    seq_type: "illumina"
+    abundance_min_pct: 0.5
+    abundance_min_samples: 10
+    species_set: "arg"
+  hyp:
+    sample_list: "hyp_samples"
+    fastq_dir: "{data_root}/fastq/hyp"
+    seq_type: "illumina"
+    abundance_min_pct: 0.5
+    abundance_min_samples: 5
+    species_set: "alt_illumina"
+  pacbio:
+    sample_list: "pacbio_idlist"
+    fastq_dir: "{data_root}/fastq/pacbio"
+    seq_type: "pacbio"
+    species_set: "longread"
+  nanopore:
+    sample_list: "nanopore_idlist"
+    fastq_dir: "{data_root}/fastq/nanopore"
+    seq_type: "nanopore"
+    species_set: "longread"
+
+analysis:
+  window_bp: 500
+  permutations: 500
+  longread_permutations: 100
+  fdr_alpha: 0.05
+  tpm_cuts:
+    low: 100
+    mid: 1000
+  tpm_pseudocount: 0.001
+  bowtie2_mp_values: [8, 6, 4, 2]   # 6 ≈ default
+  gene_length_min_longread: 1000
+
+compute:
+  threads: 48
+
+figshare:
+  project_url: "https://figshare.com/projects/Metagenomic_coverage_bias_at_transcription_start_sites_is_correlated_with_gene_expression/242600"
+  note: "Precomputed species×sample TSS coverage matrices; plot-only shortcut."
+
+# Honest MetaPhlAn version note (see docs/DATA_STAGING.md)
+metaphlan:
+  expected: "MetaPhlAn4"
+  merged_table: "mpa4_res/merged_mpa.txt"
+  bundled_partial: "metaphlan3_res/"
+  methods_text_said: "MetaPhlAn3"
+  gap: >
+    Manuscript methods historically cite MetaPhlAn3; analysis scripts expect
+    MetaPhlAn4 merged tables at mpa4_res/merged_mpa.txt. Bundled metaphlan3_res/
+    is incomplete (ARG/HYP/Franzosa fragments only) and is NOT a drop-in replacement.

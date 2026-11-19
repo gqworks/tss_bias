@@ -1,0 +1,19 @@
+#!/bin/bash
+# HMP2 discovery nulls + heatmaps (requires matrices/ + beds/ or Figshare matrices + bigWigs).
+#
+#PBS -N tss_plot_disc
+#PBS -P REPLACE_NCI_PROJECT
+#PBS -q normal
+#PBS -l ncpus=24
+#PBS -l mem=96GB
+#PBS -l walltime=48:00:00
+#PBS -l storage=gdata/REPLACE_NCI_PROJECT+scratch/REPLACE_NCI_PROJECT
+#PBS -l wd
+#PBS -j oe
+#PBS -o logs/plot_discovery.out
+
+mkdir -p "${TSS_REPO:-.}/logs"
+# shellcheck source=/dev/null
+source "${TSS_REPO}/jobs/gadi/_common.inc.sh"
+
+python plot_heatmap_scatter.py --stage discovery --threads "${PBS_NCPUS}"

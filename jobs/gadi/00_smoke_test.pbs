@@ -1,0 +1,25 @@
+#!/bin/bash
+# Lightweight sanity check: config loads, cohorts list, CLI help.
+# Does not require FASTQs or MetaPhlAn tables.
+#
+#PBS -N tss_smoke
+#PBS -P REPLACE_NCI_PROJECT
+#PBS -q normal
+#PBS -l ncpus=1
+#PBS -l mem=4GB
+#PBS -l walltime=00:10:00
+#PBS -l storage=gdata/REPLACE_NCI_PROJECT+scratch/REPLACE_NCI_PROJECT
+#PBS -l wd
+#PBS -j oe
+#PBS -o logs/smoke_test.out
+
+mkdir -p "${TSS_REPO:-.}/logs"
+# shellcheck source=/dev/null
+source "${TSS_REPO}/jobs/gadi/_common.inc.sh"
+
+python -c "from tss_bias.config import load_config; c=load_config(); print('project', c.get('gadi',{}).get('project')); print('data_root', c['paths']['data_root']); print('mpa', c['paths']['mpa_merged'])"
+python calc_coverage.py --list-cohorts
+python calc_coverage.py --help >/dev/null
+python plot_heatmap_scatter.py --help >/dev/null
+python scripts/gc_adjusted_lmm.py --help >/dev/null
+echo "SMOKE OK"

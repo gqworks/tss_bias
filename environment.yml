@@ -1,0 +1,32 @@
+name: tss_bias
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - python=3.11
+  - pip
+  - pandas>=2.0
+  - numpy>=1.24
+  - scipy>=1.10
+  - matplotlib>=3.7
+  - seaborn>=0.13
+  - biopython>=1.81
+  - pysam>=0.21
+  - pybigwig>=0.3.22
+  - statsmodels>=0.14
+  - tqdm>=4.66
+  - pyyaml>=6.0
+  - bowtie2>=2.5
+  - bwa>=0.7.17
+  - samtools>=1.18
+  - prodigal>=2.6.3
+  - deeptools>=3.5
+  - kallisto>=0.50
+  - metaphlan>=4.0
+  - megahit>=1.2
+  - pip:
+      - -e .
+# Optional / external (install separately; not always on bioconda):
+#   ART (art_illumina) — Gadi module or ART source
+#   MetaBat2, CheckM2, Kraken2, sylph, Promotech — see docs/GADI.md

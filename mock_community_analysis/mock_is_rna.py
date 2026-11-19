@@ -80,7 +80,7 @@ def adj_ratio(a,b):
 # Load alignments
 aln_file = pysam.AlignmentFile(f'bams/SRR8359173_all_ref.sorted.bam', "rb")
 aln_file.references
-#aln_file = pysam.AlignmentFile("/groups/cgsd/gordonq/TSS_depth/intergenic_hypothesis/mock_community/SRR8359173_all_ref.sorted.bam", "rb")
+#aln_file = pysam.AlignmentFile("bams/SRR8359173_all_ref.sorted.bam", "rb")  # path via workdir/config
 
 # Load gene regions
 gff_ref = pd.read_table('mock_ref/merged_genomes_prodigal.gff', comment = '#', header=None)

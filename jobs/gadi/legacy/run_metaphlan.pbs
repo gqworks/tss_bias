@@ -1,0 +1,3 @@
+# LEGACY Torque script — do not use on Gadi.
+# Historical bugs: unset $idlist; paired the same R1 file twice for metaphlan input.
+# Replacement: jobs/gadi/03_metaphlan_array.pbs + 04_merge_metaphlan.sh

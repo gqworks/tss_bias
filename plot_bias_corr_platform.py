@@ -7,6 +7,16 @@ import matplotlib.pyplot as plt
 import itertools
 import pyBigWig
 
+
+# --- Gadi/portable bootstrap (added in refactor) ---
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(_Path(__file__).resolve().parent))
+from tss_bias.runtime import bootstrap as _bootstrap, mpa_path as _mpa_path
+_CFG = _bootstrap(chdir_work=False)
+_MPA = _mpa_path(_CFG)
+_HMP2_FQ = _CFG["cohorts"]["hmp2"]["fastq_dir"]
+# --- end bootstrap ---
 def scale_mat(d):
     return (d-d.mean(axis=1)[:,None]) / d.std(axis=1)[:,None]
 
@@ -124,36 +134,38 @@ def get_null_mat(asm):
 
 ###Initialise Data
 with open('sample_lists/hmp2_samples') as f:
-    hmp2_samples = f.read().splitlines()
+    hmp2_samples = [ln for ln in f.read().splitlines() if ln.strip() and not ln.startswith('#')]
 hmp2_samples = {x.split('\t')[0]:x.split('\t')[1] for x in hmp2_samples}
 
 with open('sample_lists/Franzosa_8_samples') as f:
-    Franzosa_samples = f.read().splitlines()
+    Franzosa_samples = [ln for ln in f.read().splitlines() if ln.strip() and not ln.startswith('#')]
 Franzosa_samples = [x.rsplit('\t',1)[0] for x in Franzosa_samples]
 
 with open('sample_lists/pacbio_idlist') as f:
-    pacbio_samples = f.read().splitlines()
+    pacbio_samples = [ln for ln in f.read().splitlines() if ln.strip() and not ln.startswith('#')]
 pacbio_samples = [x.rsplit('\t',1)[0] for x in pacbio_samples]
 
 with open('sample_lists/nanopore_idlist') as f:
-    nanopore_samples = f.read().splitlines()
+    nanopore_samples = [ln for ln in f.read().splitlines() if ln.strip() and not ln.startswith('#')]
 nanopore_samples = [x.rsplit('\t',1)[0] for x in nanopore_samples]
 
 #Read species abundances
-illumina = pd.read_table('mpa4_res/merged_mpa.txt', comment= '#')
+illumina = pd.read_table(_MPA, comment= '#')
 illumina = illumina[(illumina['clade_name'].str.contains("s__"))&(illumina['clade_name'].str.contains("k__Bacteria"))&(~illumina['clade_name'].str.contains("t__"))]
 illumina.index = [re.match('.*\|([^\|]*)',x).group(1) for x in illumina['clade_name']]
-illumina = illumina[hmp2_samples]
+_hmp2_ids = list(hmp2_samples.keys()) if isinstance(hmp2_samples, dict) else list(hmp2_samples)
+illumina = illumina[_hmp2_ids]
+hmp2_samples = _hmp2_ids
 illumina = illumina[illumina.sum(axis=1) > 0]
 illumina = illumina.div(illumina.sum(axis=0), axis=1) * 100
 
-pacbio = pd.read_csv('src/pacbio_merged_mpa.tsv',header = 0, index_col = 0, sep = '\t')
+pacbio = pd.read_csv(_CFG['paths']['reference_dir'] + '/pacbio_merged_mpa.tsv',header = 0, index_col = 0, sep = '\t')
 pacbio = pacbio[(pacbio.index.str.contains("s__"))&(pacbio.index.str.contains("k__Bacillati|k__Pseudomonadati"))&(~pacbio.index.str.contains("t__"))]
 pacbio.index = [re.match('.*\|([^\|]*)',x).group(1) for x in pacbio.index]
 pacbio = pacbio[pacbio.sum(axis=1) > 100]
 pacbio = pacbio.div(pacbio.sum(axis=0), axis=1) * 100
 
-nanopore = pd.read_csv('src/nanopore_merged_mpa.tsv',header = 0, index_col = 0, sep = '\t')
+nanopore = pd.read_csv(_CFG['paths']['reference_dir'] + '/nanopore_merged_mpa.tsv',header = 0, index_col = 0, sep = '\t')
 nanopore = nanopore[(nanopore.index.str.contains("s__"))&(nanopore.index.str.contains("k__Bacillati|k__Pseudomonadati"))&(~nanopore.index.str.contains("t__"))]
 nanopore.index = [re.match('.*\|([^\|]*)',x).group(1) for x in nanopore.index]
 nanopore = nanopore[nanopore.sum(axis=1) > 100]

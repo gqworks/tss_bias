@@ -12,6 +12,16 @@ from io import StringIO
 from scipy.stats import ttest_rel
 from pathlib import Path
 
+
+# --- Gadi/portable bootstrap (added in refactor) ---
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(_Path(__file__).resolve().parent))
+from tss_bias.runtime import bootstrap as _bootstrap, mpa_path as _mpa_path
+_CFG = _bootstrap(chdir_work=False)
+_MPA = _mpa_path(_CFG)
+_HMP2_FQ = _CFG["cohorts"]["hmp2"]["fastq_dir"]
+# --- end bootstrap ---
 def scale_mat(d):
     mean_vals = d.mean(axis=1).to_numpy()
     std_vals = d.std(axis=1).to_numpy()
@@ -76,11 +86,11 @@ def add_p_val(ax,lft,rgt,y,h,p):
 
 # HMP2 Samples
 with open('sample_lists/hmp2_samples') as f:
-    hmp2_samples = f.read().splitlines()
-hmp2_samples = {x.split('\t')[0]:x.split('\t')[2] for x in hmp2_samples}
+    hmp2_samples = [ln for ln in f.read().splitlines() if ln.strip() and not ln.startswith('#')]
+hmp2_samples = {x.split('\t')[0]: _HMP2_FQ for x in hmp2_samples}
 
 #Read species abundances
-mpa_res = pd.read_table('mpa4_res/merged_mpa.txt', comment= '#')
+mpa_res = pd.read_table(_MPA, comment= '#')
 mpa_res = mpa_res[(mpa_res['clade_name'].str.contains("s__"))&(~mpa_res['clade_name'].str.contains("t__"))]
 mpa_res.index = [re.match('.*\|([^\|]*)',x).group(1) for x in mpa_res['clade_name']]
 mpa_res = mpa_res.drop(columns=['clade_name'])
@@ -134,7 +144,10 @@ for sample, path in hmp2_samples.items():
         os.mkdir(f'assembled_ref/{sample}/kraken_res/')
     for i in glob.glob(f'assembled_ref/{sample}/metabat/*.fa'):
         bin_no = re.match('.*(bin\.\d+)\.fa',i).group(1)
-        subprocess.call(f'ml ncbi-blast/2.12.0 kraken/2.1.2 && kraken2 --threads 64 --db /groups/cgsd/hbyao/db/bfv/ --output assembled_ref/{sample}/kraken_res/{bin_no}.kra --report assembled_ref/{sample}/kraken_res/{bin_no}.report {i}', shell = True)  
+        kraken_db = _CFG.get('software', {}).get('kraken_db') or os.environ.get('KRAKEN_DB', '')
+        if not kraken_db:
+            raise RuntimeError('Set software.kraken_db or KRAKEN_DB for Kraken2')
+        subprocess.call(f'module load kraken2 2>/dev/null; kraken2 --threads 64 --db {kraken_db} --output assembled_ref/{sample}/kraken_res/{bin_no}.kra --report assembled_ref/{sample}/kraken_res/{bin_no}.report {i}', shell = True)  
 '''
 
 # Find number of reads aligned

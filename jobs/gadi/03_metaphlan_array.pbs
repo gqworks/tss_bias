@@ -1,0 +1,52 @@
+#!/bin/bash
+# MetaPhlAn4 per-sample array job. Fix: uses R1,R2 correctly (legacy run_metaphlan.pbs paired R1 twice).
+#
+# Prepare a plain sample ID list (one ID per line), then:
+#   N=$(wc -l < data/sample_lists/hmp2_dna_ids.txt)
+#   qsub -J 1-N -v TSS_REPO=...,SAMPLE_LIST=...,FASTQ_DIR=... jobs/gadi/03_metaphlan_array.pbs
+#
+#PBS -N tss_mpa4
+#PBS -P REPLACE_NCI_PROJECT
+#PBS -q normal
+#PBS -l ncpus=16
+#PBS -l mem=64GB
+#PBS -l walltime=12:00:00
+#PBS -l storage=gdata/REPLACE_NCI_PROJECT+scratch/REPLACE_NCI_PROJECT
+#PBS -l wd
+#PBS -j oe
+#PBS -o logs/metaphlan_array.out
+
+mkdir -p "${TSS_REPO:-.}/logs"
+# shellcheck source=/dev/null
+source "${TSS_REPO}/jobs/gadi/_common.inc.sh"
+
+: "${SAMPLE_LIST:?Set SAMPLE_LIST to a file of sample IDs}"
+: "${FASTQ_DIR:?Set FASTQ_DIR to directory containing \${sample}_1.fastq.gz}"
+MPA_OUT="${MPA_OUT:-${TSS_REPO}/workdir/mpa4_res}"
+mkdir -p "${MPA_OUT}"
+
+sample=$(sed -n "${PBS_ARRAY_INDEX}p" "${SAMPLE_LIST}")
+if [[ -z "${sample}" ]]; then
+  echo "No sample for PBS_ARRAY_INDEX=${PBS_ARRAY_INDEX}" >&2
+  exit 1
+fi
+
+r1="${FASTQ_DIR}/${sample}_1.fastq.gz"
+r2="${FASTQ_DIR}/${sample}_2.fastq.gz"
+if [[ ! -f "${r1}" || ! -f "${r2}" ]]; then
+  echo "Missing FASTQs for ${sample}: ${r1} ${r2}" >&2
+  exit 1
+fi
+
+out="${MPA_OUT}/${sample}.txt"
+if [[ -f "${out}" ]]; then
+  echo "Exists: ${out}"
+  exit 0
+fi
+
+module load metaphlan 2>/dev/null || true
+metaphlan "${r1},${r2}" --input_type fastq --nproc "${PBS_NCPUS}" \
+  --mapout "${MPA_OUT}/${sample}.bowtie2.bz2" \
+  -o "${out}"
+
+echo "Wrote ${out}"

@@ -1,0 +1,60 @@
+# Pinned RefSeq assemblies (from post–“fixed genomes” commit).
+# Values are NCBI assembly directory names under genomes/all/...
+
+all:
+  s__Phocaeicola_vulgatus: GCF_000012825.1_ASM1282v1
+  s__Agathobacter_rectalis: GCF_022453685.1_ASM2245368v1
+  s__Alistipes_putredinis: GCF_000154465.1_ASM15446v1
+  s__Faecalibacterium_prausnitzii: GCF_000154385.1_ASM15438v1
+  s__Bacteroides_uniformis: GCF_044361425.1_ASM4436142v1
+  s__Phascolarctobacterium_faecium: GCF_003945365.1_PFJ30894_01
+  s__Parabacteroides_distasonis: GCF_018279895.1_ASM1827989v1
+  s__Gemmiger_formicilis: GCF_900167555.1_IMG-taxon_2590828806_annotated_assembly
+  s__Fusicatenibacter_saccharivorans: GCF_027667425.1_ASM2766742v1
+  s__Bacteroides_caccae: GCF_018292205.1_ASM1829220v1
+  s__Ruminococcus_bromii: GCF_014863965.1_ASM1486396v1
+  s__Roseburia_faecis: GCF_015550045.1_ASM1555004v1
+
+cohorts:
+  franzosa:
+    s__Phocaeicola_vulgatus: GCF_000012825.1_ASM1282v1
+    s__Agathobacter_rectalis: GCF_022453685.1_ASM2245368v1
+    s__Alistipes_putredinis: GCF_000154465.1_ASM15446v1
+    s__Faecalibacterium_prausnitzii: GCF_000154385.1_ASM15438v1
+    s__Bacteroides_uniformis: GCF_044361425.1_ASM4436142v1
+    s__Phascolarctobacterium_faecium: GCF_003945365.1_PFJ30894_01
+    s__Parabacteroides_distasonis: GCF_018279895.1_ASM1827989v1
+    s__Gemmiger_formicilis: GCF_900167555.1_IMG-taxon_2590828806_annotated_assembly
+    s__Fusicatenibacter_saccharivorans: GCF_027667425.1_ASM2766742v1
+
+  hmp2:
+    s__Phocaeicola_vulgatus: GCF_000012825.1_ASM1282v1
+    s__Agathobacter_rectalis: GCF_022453685.1_ASM2245368v1
+    s__Alistipes_putredinis: GCF_000154465.1_ASM15446v1
+    s__Faecalibacterium_prausnitzii: GCF_000154385.1_ASM15438v1
+    s__Bacteroides_uniformis: GCF_044361425.1_ASM4436142v1
+    s__Parabacteroides_distasonis: GCF_018279895.1_ASM1827989v1
+    s__Bacteroides_caccae: GCF_018292205.1_ASM1829220v1
+
+  alt_illumina:
+    s__Phocaeicola_vulgatus: GCF_000012825.1_ASM1282v1
+    s__Agathobacter_rectalis: GCF_022453685.1_ASM2245368v1
+    s__Alistipes_putredinis: GCF_000154465.1_ASM15446v1
+    s__Faecalibacterium_prausnitzii: GCF_000154385.1_ASM15438v1
+    s__Bacteroides_uniformis: GCF_044361425.1_ASM4436142v1
+
+  longread:
+    s__Phocaeicola_vulgatus: GCF_000012825.1_ASM1282v1
+    s__Bacteroides_uniformis: GCF_044361425.1_ASM4436142v1
+    s__Agathobacter_rectalis: GCF_022453685.1_ASM2245368v1
+    s__Alistipes_putredinis: GCF_000154465.1_ASM15446v1
+    s__Faecalibacterium_prausnitzii: GCF_000154385.1_ASM15438v1
+
+  arg:
+    s__Phocaeicola_vulgatus: GCF_000012825.1_ASM1282v1
+    s__Bacteroides_uniformis: GCF_044361425.1_ASM4436142v1
+    s__Agathobacter_rectalis: GCF_022453685.1_ASM2245368v1
+    s__Parabacteroides_distasonis: GCF_018279895.1_ASM1827989v1
+    s__Ruminococcus_bromii: GCF_014863965.1_ASM1486396v1
+    s__Roseburia_faecis: GCF_015550045.1_ASM1555004v1
+    s__Faecalibacterium_prausnitzii: GCF_000154385.1_ASM15438v1
