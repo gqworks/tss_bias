@@ -159,6 +159,62 @@ def test_liu2016_discover_fails_when_fastqs_are_absent(capsys):
     assert "No results were written" in captured.err
 
 
+PUBLIC_COLUMNS = [
+    "sample_id",
+    "sample_alias",
+    "biosample",
+    "bioproject",
+    "sra_study",
+    "library_layout",
+    "library_strategy",
+]
+
+
+def test_public_manifests_use_sra_run_ids():
+    from tssbias.cohorts import read_manifest
+    from tssbias.config import load_config
+
+    cfg = load_config()
+    expected = {
+        "hmp2": (78, "PRJNA389280", "SRP115812", True),
+        "franzosa": (8, "PRJNA188481", "SRP019038", False),
+        "pacbio": (11, "PRJNA754443", "SRP332749", False),
+        "nanopore": (10, "PRJNA820119", "SRP366030", False),
+        "matched": (10, "PRJNA820119", "SRP366030", False),
+    }
+    for name, (n, project, study, paired) in expected.items():
+        cohort = cfg.cohort(name)
+        assert cohort.bioproject == project
+        assert cohort.paired_rna is paired
+        frame = pd.read_csv(cohort.manifest, sep="\t", dtype=str)
+        assert list(frame.columns[:7]) == PUBLIC_COLUMNS
+        assert len(frame) == n
+        assert frame["sample_alias"].tolist() == sorted(frame["sample_alias"])
+        assert frame["sample_id"].is_unique
+        assert frame["sample_alias"].is_unique
+        assert frame["biosample"].is_unique
+        assert set(frame["bioproject"]) == {project}
+        assert set(frame["sra_study"]) == {study}
+        text = cohort.manifest.read_text()
+        assert "/groups/" not in text
+        assert "cgsd" not in text
+        samples = read_manifest(cohort.manifest)
+        assert [sample.sample_id for sample in samples] == frame["sample_id"].tolist()
+    franzosa = pd.read_csv(cfg.cohort("franzosa").manifest, sep="\t", dtype=str)
+    assert franzosa["sample_alias"].str.endswith("_RNAlater").all()
+    assert set(franzosa["library_strategy"]) == {"WGS"}
+    hmp2 = pd.read_csv(cfg.cohort("hmp2").manifest, sep="\t", dtype=str)
+    assert hmp2["rna_id"].is_unique
+    assert set(hmp2["rna_id"]).isdisjoint(set(hmp2["sample_id"]))
+    matched = pd.read_csv(cfg.cohort("matched").manifest, sep="\t", dtype=str)
+    samples = read_manifest(cfg.cohort("matched").manifest)
+    assert [sample.longread_id for sample in samples] == matched["longread_srr"].tolist()
+    assert set(matched["library_layout"]) == {"PAIRED"}
+    nanopore = pd.read_csv(cfg.cohort("nanopore").manifest, sep="\t", dtype=str)
+    assert set(matched["longread_srr"]) == set(nanopore["sample_id"])
+    assert set(nanopore["library_layout"]) == {"SINGLE"}
+
+
 def test_hmp3_stool_discover_fails_when_fastqs_are_absent(capsys):
     code = main(["discover", "--cohort", "hmp3_stool", "--sample-index", "0"])
     captured = capsys.readouterr()

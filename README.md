@@ -75,7 +75,7 @@ Scores are median semi-global alignments (`align.calign`, DNAFULL) of the unmapp
 | sylph containment ANI | `python -m tssbias sylph --cohort hmp2` |
 | Rebuild the abundance table | `python -m tssbias metaphlan --cohort hmp2` |
 
-Franzosa replication uses the 8 RNAlater accessions in `data/manifests/franzosa_rnalater.tsv`. iHMP is the 78 pairs in `data/manifests/hmp2.tsv` (DNA id, RNA id), BioProject PRJNA389280. Array jobs pass `--sample-index` (0-based).
+Franzosa replication uses the 8 RNAlater DNA runs in `data/manifests/franzosa_rnalater.tsv` (PRJNA188481). iHMP is the 78 DNA runs in `data/manifests/hmp2.tsv` (PRJNA389280), each with its paired RNA run in `rna_id`. Array jobs pass `--sample-index` (0-based). The column layout and the one-run rules are below.
 
 ## HMP Phase III stool (replaces HYP)
 
@@ -102,6 +102,35 @@ Source: Liu et al., Scientific Reports 2016, BioProject PRJNA328899, SRA study S
 The manifest is `data/manifests/liu2016.tsv` (110 runs, 110 samples). Selection rule: keep every public run in that BioProject. Each `sample_alias` (`Sample_001` through `Sample_112`, with `Sample_052` and `Sample_101` absent from the archive) and each BioSample has exactly one run, so the one-run-per-sample rule drops nothing. Rows are sorted by `sample_alias`, then `run_accession`.
 
 Stage paired FASTQs at `{data_root}/fastq/liu2016/{SRR}_1.fastq.gz` and `{SRR}_2.fastq.gz`. The commands do not download this cohort. If a file is absent, `check-inputs` and `discover` exit 2 and write nothing. Rebuild abundance with `python -m tssbias metaphlan --cohort liu2016` into `{data_root}/mpa4_res/liu2016/merged_mpa.txt`. On Gadi, `TSS_COHORT=liu2016` and a 1–110 array cover the manifest.
+
+## iHMP (HMP2)
+
+`data/manifests/hmp2.tsv` keeps the existing public DNA set: 78 runs, 78 samples, BioProject PRJNA389280, SRA study SRP115812. `sample_id` is the metagenomic WGS run. Columns match the other public manifests, plus `rna_id`, the paired metatranscriptomic run. DNA and RNA are different BioSamples, so the pair is the one already in this manifest, not a shared accession.
+
+Selection rule: keep every DNA run already in the cohort. Each of those 78 aliases and BioSamples has exactly one run in the project, so the one-run-per-sample rule drops nothing. The other 300 metagenomes in PRJNA389280 are not added. Rows are sorted by `sample_alias`, then `sample_id`. No cluster path is stored.
+
+## Franzosa RNAlater
+
+`data/manifests/franzosa_rnalater.tsv` is the public Franzosa set, BioProject PRJNA188481, SRA study SRP019038. The public table has 80 runs and 32 aliases (8 people × RNAlater, ETOH, Whole, and Saliva).
+
+Selection rule, applied in this order:
+
+1. Keep stool stored in RNAlater. The person id is the `X########` prefix of `sample_alias`. Drop `ETOH` (ethanol), `Whole` (frozen), and `Saliva`.
+2. Keep the paired-end WGS metagenome (`library_strategy=WGS`, `library_source=METAGENOMIC`). Each RNAlater alias also has two RNA-Seq runs; those are not this DNA cohort.
+3. Keep one run per alias. Each RNAlater alias and BioSample has exactly one WGS run, so nothing further is dropped. That leaves 8 people, 8 runs.
+4. Sort by `sample_alias`.
+
+The previous 8-row list was already these eight accessions. The commands do not download the FASTQs.
+
+## PacBio, Nanopore, and matched long reads
+
+These three manifests use the same columns. `sample_id` is the SRA run. No cluster path is stored. Each alias and BioSample in the source list has one run, so the one-run-per-sample rule drops nothing. Rows are sorted by `sample_alias`, then `sample_id`.
+
+`data/manifests/pacbio.tsv` is 11 Sequel II WGS runs, BioProject PRJNA754443, SRA study SRP332749. Layout is `SINGLE`. Aliases are `1_baseline` through `6_baseline` and the matching `*_treatment` rows.
+
+`data/manifests/nanopore.tsv` is 10 PromethION WGS runs, BioProject PRJNA820119, SRA study SRP366030. Layout is `SINGLE`. Aliases are `CD91`–`CD100`.
+
+`data/manifests/matched_longread.tsv` is the 10 Illumina NovaSeq runs from the same BioProject, one per donor. `sample_id` is that paired-end WGS run. `longread_srr` is the PromethION run whose alias is the same `CD` id (the Nanopore manifest). The short-read and long-read deposits are different BioSamples, so both accessions stay on the row. The commands do not download either FASTQ.
 
 ## What runs here, and what needs Gadi
 

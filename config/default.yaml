@@ -89,7 +89,7 @@ cohorts:
     abundance_min_samples: 5
     species_set: franzosa
     abundance_table: "{data_root}/mpa4_res/merged_mpa.txt"
-    bioproject: ""
+    bioproject: PRJNA188481
     paired_rna: false
   # Liu et al. 2016. Display name is exactly "Liu et al." All 110 public runs.
   liu2016:
@@ -123,7 +123,7 @@ cohorts:
     abundance_min_samples: 4
     species_set: longread
     abundance_table: "{repo_root}/src/pacbio_merged_mpa.tsv"
-    bioproject: ""
+    bioproject: PRJNA754443
     paired_rna: false
   nanopore:
     manifest: "{repo_root}/data/manifests/nanopore.tsv"
@@ -133,7 +133,7 @@ cohorts:
     abundance_min_samples: 4
     species_set: longread
     abundance_table: "{repo_root}/src/nanopore_merged_mpa.tsv"
-    bioproject: ""
+    bioproject: PRJNA820119
     paired_rna: false
   matched:
     manifest: "{repo_root}/data/manifests/matched_longread.tsv"
@@ -143,5 +143,5 @@ cohorts:
     abundance_min_samples: 5
     species_set: matched
     abundance_table: "{data_root}/mpa4_res/matched_merged_mpa.txt"
-    bioproject: ""
+    bioproject: PRJNA820119
     paired_rna: false
