@@ -161,7 +161,7 @@ python -m tssbias download data/manifests/matched_longread.tsv
 python -m tssbias matched-longread
 ```
 
-Illumina FASTQs land in `{data_root}/fastq/mock/`. The HiFi file lands in `{data_root}/fastq/mock/longread/`. Gut pairs land in `{data_root}/fastq/matched_longread/` and `{data_root}/fastq/matched_longread/longread/`. `mock` is the exact-strain no-bias control. `five-prime --cohort mock` is the 5′ check on that one sample. `--hifi` contrasts those reads mapped to the HiFi reference. `matched-longread` stays the gut same-sample test.
+Illumina FASTQs land in `{data_root}/fastq/mock/`. The HiFi file lands in `{data_root}/fastq/mock/longread/`. Gut pairs land in `{data_root}/fastq/matched_longread/` and `{data_root}/fastq/matched_longread/longread/`. `mock` is the exact-strain no-bias control on the 20 concatenated ATCC genomes. `five-prime --cohort mock` is the 5′ check on that one sample. `mock --hifi` maps those Illumina reads to a 100,000-read subset of `SRR11606871` and contrasts that bias with the exact-strain result. The subset is written to `{scratch_root}/mock/hifi/SRR11606871_100k.fa` before Prodigal, Bowtie2, or minimap2. `matched-longread` stays the gut same-sample test. The old `mock_community_analysis/` scripts are not the rerun path.
 
 ## What runs here, and what needs Gadi
 

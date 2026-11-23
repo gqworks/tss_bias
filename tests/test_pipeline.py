@@ -256,6 +256,34 @@ def test_mock_cohort_uses_one_manifest_and_does_not_download(capsys):
     assert "fastq/matched_longread/longread/" in captured.err
 
 
+def test_hifi_subset_is_100k_and_written_before_downstream(tmp_path):
+    from tssbias.commands.mock import hifi_subset_path, write_hifi_subset
+    from tssbias.config import load_config
+    from tssbias.stats import rng_for
+
+    cfg = load_config()
+    assert cfg.longread_subsample == 100_000
+    subset = hifi_subset_path(cfg)
+    assert subset == cfg.scratch_root / "mock" / "hifi" / "SRR11606871_100k.fa"
+    fastq = tmp_path / "hifi.fastq"
+    records = []
+    with fastq.open("w") as handle:
+        for index in range(12):
+            name = f"read{index}"
+            records.append(name)
+            handle.write(f"@{name} extra\n{'A' * (20 + index)}\n+\n{'I' * (20 + index)}\n")
+    destination = tmp_path / "SRR11606871_100k.fa"
+    written = write_hifi_subset(fastq, destination, 4, rng_for(1, "mock-hifi-100k", "SRR11606871"))
+    assert written == 4
+    names = [line[1:].split()[0] for line in destination.read_text().splitlines() if line.startswith(">")]
+    assert len(names) == 4
+    assert set(names) <= set(records)
+    again = tmp_path / "again.fa"
+    write_hifi_subset(fastq, again, 4, rng_for(1, "mock-hifi-100k", "SRR11606871"))
+    assert again.read_text() == destination.read_text()
+    assert not destination.with_name(destination.name + ".partial").exists()
+
+
 def test_abundance_tables_are_metaphlan4_outputs():
     from tssbias.config import load_config
 

@@ -1,14 +1,17 @@
 """ATCC MSA-1003 mock community: exact-strain references should show no TSS bias.
 
-The 20 reference URLs and the Illumina/HiFi accessions are the ones in
-``mock_community_analysis/download_mock.pbs``. Genomes are concatenated in
-that order. Coverage bias uses the same Prodigal filter and ±500 bp metric
-as the gut cohorts.
+The 20 RefSeq URLs are concatenated in the order listed here. Coverage bias
+uses the same Prodigal filter and ±500 bp metric as the gut cohorts.
+
+``mock --hifi`` subsets the HiFi run to ``analysis.longread_subsample`` reads
+(100,000) and writes that FASTA before Prodigal, Bowtie2, or minimap2. The
+full HiFi FASTQ is not the alignment reference.
 """
 
 from __future__ import annotations
 
 import argparse
+import gzip
 import shutil
 
 from tssbias.config import Config
@@ -113,23 +116,80 @@ def _exact_strain(cfg: Config) -> None:
 
 
 def download_urls() -> list[str]:
-    """Reference URLs recorded in the original mock download script."""
+    """Reference URLs for the 20 ATCC genomes, in concatenation order."""
     return list(REFERENCES)
+
+
+def hifi_subset_path(cfg: Config):
+    """FASTA of the 100,000-read HiFi subset used by ``mock --hifi``.
+
+    Default location is ``{scratch_root}/mock/hifi/SRR11606871_100k.fa``.
+    """
+    return cfg.scratch_root / "mock" / "hifi" / f"{HIFI}_100k.fa"
+
+
+def write_hifi_subset(fastq, destination, n: int, rng) -> int:
+    """Reservoir-sample up to ``n`` FASTQ records and write them as FASTA.
+
+    Inputs:
+        fastq: staged HiFi FASTQ, gzipped or plain. Every record is eligible.
+            This is not the matched-longread 10 kb filter.
+        destination: FASTA path. A partial file is replaced only after the
+            sample is complete.
+        n: read count. The pipeline value is 100,000.
+        rng: numpy Generator from :func:`tssbias.stats.rng_for`.
+    Outputs:
+        Number of reads written. Downstream steps must open ``destination``,
+        not ``fastq``.
+    """
+    if n < 1:
+        raise MissingInputError(f"HiFi subset size must be positive, got {n}", [fastq])
+    reservoir: list[tuple[str, str]] = []
+    seen = 0
+    opener = gzip.open if str(fastq).endswith(".gz") else open
+    with opener(fastq, "rt") as handle:
+        while True:
+            header = handle.readline()
+            if not header:
+                break
+            sequence = handle.readline().strip()
+            plus = handle.readline()
+            handle.readline()
+            if not header.startswith("@") or not plus.startswith("+"):
+                raise MissingInputError(f"{fastq} is not FASTQ; refusing to guess records", [fastq])
+            seen += 1
+            record = (header[1:].split()[0], sequence)
+            if len(reservoir) < n:
+                reservoir.append(record)
+                continue
+            draw = int(rng.integers(0, seen))
+            if draw < n:
+                reservoir[draw] = record
+    if not reservoir:
+        raise MissingInputError(f"no reads in HiFi FASTQ {fastq}", [fastq])
+    partial = destination.with_name(destination.name + ".partial")
+    with partial.open("w") as handle:
+        for name, sequence in reservoir:
+            handle.write(f">{name}\n{sequence}\n")
+    partial.replace(destination)
+    return len(reservoir)
 
 
 def _hifi_contrast(cfg: Config) -> None:
     """Illumina bias on the HiFi reference versus the exact-strain bias.
 
-    Reuses the matched-longread subsample, Prodigal filter, and minimap2
-    gene match. FASTQs come from ``download data/manifests/mock.tsv``.
+    The HiFi FASTQ is reduced to 100,000 reads first. Prodigal, Bowtie2, and
+    minimap2 then see only that FASTA. FASTQs come from
+    ``download data/manifests/mock.tsv``.
     """
     import numpy as np
     import pandas as pd
 
     from tssbias.cohorts import longread_fastq
-    from tssbias.commands.matched import _loci_mapping_to, _subsample
+    from tssbias.commands.matched import _loci_mapping_to
     from tssbias.coverage import depth_from_bigwig, orient_windows, read_matrix
     from tssbias.metrics import coverage_bias
+    from tssbias.stats import rng_for
     from tssbias.tss import filter_isolated_tss, parse_prodigal_gff
 
     fastq_dir = cfg.data_root / "fastq" / "mock"
@@ -150,11 +210,17 @@ def _hifi_contrast(cfg: Config) -> None:
             "This command does not download FASTQs.",
             missing,
         )
-    work = cfg.scratch_root / "mock" / "hifi"
-    work.mkdir(parents=True, exist_ok=True)
-    subset = work / "longreads.fa"
+    subset = hifi_subset_path(cfg)
+    subset.parent.mkdir(parents=True, exist_ok=True)
+    work = subset.parent
     if not subset.exists():
-        _subsample(cfg, long_fastq, subset, HIFI)
+        written = write_hifi_subset(
+            long_fastq,
+            subset,
+            cfg.longread_subsample,
+            rng_for(cfg.seed, "mock-hifi-100k", HIFI),
+        )
+        LOG.info("wrote %s HiFi reads to %s before downstream steps", written, subset)
     gff = work / "prodigal.gff"
     cds = work / "prodigal.fna"
     if not gff.exists():
