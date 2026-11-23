@@ -57,7 +57,24 @@ def main(argv: list[str] | None = None) -> int:
     cohort_parser("mag-bias", "MEGAHIT/MetaBAT2/Kraken bins versus RefSeq bias.", mag.run)
     cohort_parser("promotech", "Promotech promoters within 100 bp of Prodigal starts.", promotech.run)
     cohort_parser("sylph", "sylph adjusted ANI versus coverage bias.", sylph.run)
-    cohort_parser("metaphlan", "Run MetaPhlAn and write the merged abundance table.", metaphlan.run)
+    mpa_cmd = sub.add_parser(
+        "metaphlan",
+        help="Run MetaPhlAn 4 on staged FASTQs and write the merged species table.",
+    )
+    mpa_cmd.add_argument(
+        "manifest",
+        type=Path,
+        help="Manifest TSV. Writes {data_root}/mpa4_res/<cohort>/merged_mpa.txt",
+    )
+    mpa_cmd.add_argument("--sample", default=None, help="Profile one manifest sample id")
+    mpa_cmd.add_argument(
+        "--sample-index",
+        type=int,
+        default=None,
+        help="0-based index into the manifest (PBS array index minus 1). Does not merge.",
+    )
+    mpa_cmd.add_argument("--force", action="store_true", help="Recompute profiles that already exist")
+    mpa_cmd.set_defaults(func=metaphlan.run)
     cohort_parser("upstream-scores", "Semi-global scores of upstream mates and the alignment LMM.", upstream.run)
 
     cohorts = sub.add_parser("cohort-correlation", help="Pearson correlation of bias across Illumina cohorts.")

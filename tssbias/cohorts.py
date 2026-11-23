@@ -5,9 +5,11 @@ published (already percentages). Long-read tables shipped under ``src/`` are
 clade count tables; species rows are converted to a percentage of the
 species-level column sum before the 0.5% rule is applied.
 
-The manuscript names MetaPhlAn3. Later lab scripts read a MetaPhlAn4 merged
-table at ``mpa4_res/merged_mpa.txt``. This loader accepts either species-level
-layout. The partial ``metaphlan3_res/`` checkout is not a substitute.
+Species tables are MetaPhlAn 4 output written by
+``python -m tssbias metaphlan <manifest>`` to
+``{data_root}/mpa4_res/<cohort>/merged_mpa.txt``. This loader reads that
+file. A count table whose column sum exceeds 100 is converted to a
+percentage of the species-level column sum before the 0.5% rule.
 """
 
 from __future__ import annotations

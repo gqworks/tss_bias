@@ -7,8 +7,14 @@ set -euo pipefail
 cd "${PBS_O_WORKDIR}"
 export TSS_CONFIG="${TSS_CONFIG:-${PBS_O_WORKDIR}/config/gadi.local.yaml}"
 cohort="${TSS_COHORT:-hmp2}"
+case "${cohort}" in
+  franzosa) default_manifest="data/manifests/franzosa_rnalater.tsv" ;;
+  matched) default_manifest="data/manifests/matched_longread.tsv" ;;
+  *) default_manifest="data/manifests/${cohort}.tsv" ;;
+esac
+manifest="${TSS_MANIFEST:-${PBS_O_WORKDIR}/${default_manifest}}"
 if [[ -n "${PBS_ARRAY_INDEX:-}" ]]; then
-  python -m tssbias metaphlan --cohort "${cohort}" --sample-index "$((PBS_ARRAY_INDEX - 1))"
+  python -m tssbias metaphlan "${manifest}" --sample-index "$((PBS_ARRAY_INDEX - 1))"
 else
-  python -m tssbias metaphlan --cohort "${cohort}"
+  python -m tssbias metaphlan "${manifest}"
 fi

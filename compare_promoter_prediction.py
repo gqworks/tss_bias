@@ -83,7 +83,7 @@ def remove_TSS_overlap(dat):
 
 ###Initialise Data
 '''
-mpa_res = pd.read_table('metaphlan3_res/merged_mpa.txt', comment= '#')
+mpa_res = pd.read_table('staged_data/mpa4_res/franzosa/merged_mpa.txt', comment= '#')
 mpa_res = mpa_res[mpa_res['clade_name'].str.contains("s__")]
 mpa_res.index = [int(re.match('.*\|([^\|]*)',x).group(1)) for x in mpa_res['NCBI_tax_id']]
 mpa_res = mpa_res.drop(columns=['clade_name', 'NCBI_tax_id'])

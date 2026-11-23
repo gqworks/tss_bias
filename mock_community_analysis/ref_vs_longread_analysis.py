@@ -44,10 +44,10 @@ with open('matched_dataset_idlist') as f:
     samples = f.read().splitlines()
 samples = [x.split('\t') for x in samples]
 
-mpa_res = pd.read_table('metaphlan3_res/merged_mpa.txt', comment= '#')
+mpa_res = pd.read_table('../staged_data/mpa4_res/matched/merged_mpa.txt', comment= '#')
 mpa_res = mpa_res[mpa_res['clade_name'].str.contains("s__")]
 mpa_res.index = [re.match('.*\|([^\|]*)',x).group(1) for x in mpa_res['clade_name']]
-mpa_res = mpa_res.drop(columns=['clade_name','NCBI_tax_id'])
+mpa_res = mpa_res.drop(columns=[col for col in ('clade_name', 'NCBI_tax_id') if col in mpa_res.columns])
 mpa_res = mpa_res.loc[(mpa_res > 0.5).sum(axis=1) > 5,:] # Filter species with atleast 0.5% abundance in more than 5 samples
 mpa_res = mpa_res.where(mpa_res > 0.5, np.nan)
 mpa_res = mpa_res.rename(index={'s__Bacteroides_vulgatus': 's__Phocaeicola_vulgatus', 's__Eubacterium_hallii':'s__Anaerobutyricum_hallii'})

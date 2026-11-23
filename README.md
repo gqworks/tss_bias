@@ -29,7 +29,7 @@ A missing FASTQ, abundance table, BAM, or reference raises a missing-input error
 
 The lab scripts summed an asymmetric 500-vs-501 bp split of the z-scored window. This pipeline uses the manuscript mean of the two 500 bp flanks. Accessions follow the assemblies those scripts actually ran. A methods table in the revision draft swaps *F. prausnitzii* and *P. vulgatus*; `config/species.yaml` does not.
 
-The manuscript says MetaPhlAn3. Later scripts read a merged species table at `mpa4_res/merged_mpa.txt`. `metaphlan` runs the `metaphlan` binary on PATH and writes that path. The partial `metaphlan3_res/` checkout is not that table. Long-read tables in `src/` are counts and are converted to a percentage of the species-level column sum before the 0.5% rule.
+Species abundance is a MetaPhlAn 4 table at `{data_root}/mpa4_res/<cohort>/merged_mpa.txt`, written by `python -m tssbias metaphlan data/manifests/<name>.tsv` from the staged FASTQs. The repository does not ship profiles. A count table whose column sum exceeds 100 is still converted to a percentage of the species-level column sum before the 0.5% rule.
 
 ## GC-adjusted mixed model
 
@@ -73,7 +73,7 @@ Scores are median semi-global alignments (`align.calign`, DNAFULL) of the unmapp
 | Substitutions vs expression (Suppl. Fig. 8) | `python -m tssbias substitutions --cohort hmp2` |
 | Promotech vs Prodigal (Suppl. Fig. 1) | `python -m tssbias promotech --cohort hmp2` |
 | sylph containment ANI | `python -m tssbias sylph --cohort hmp2` |
-| Rebuild the abundance table | `python -m tssbias metaphlan --cohort hmp2` |
+| Rebuild the abundance table | `python -m tssbias metaphlan data/manifests/hmp2.tsv` |
 
 Franzosa replication uses the 8 RNAlater DNA runs in `data/manifests/franzosa_rnalater.tsv` (PRJNA188481). iHMP is the 78 DNA runs in `data/manifests/hmp2.tsv` (PRJNA389280), each with its paired RNA run in `rna_id`. Array jobs pass `--sample-index` (0-based). The column layout and the one-run rules are below.
 
@@ -91,7 +91,7 @@ Selection rule, applied in this order:
 4. Do not collapse further. The alias is `{specimen}_zg_G_DNA_Stool`. `zg` is the stool-site token on every stool row (other sites use `zs1`, `zo1`, `zv2`, `zo7`, `zo9`). No specimen number is shared across aliases, so a repeat visit of the same donor is not visible. Public BioSample records have no subject id; that link is dbGaP phs000228 and is not used.
 5. Sort the 89 aliases ascending. The manifest is that full list.
 
-Stage paired FASTQs at `{data_root}/fastq/hmp3_stool/{SRR}_1.fastq.gz` and `{SRR}_2.fastq.gz`. The commands do not download this cohort. If a file is absent, `check-inputs` and `discover` exit 2 and write nothing. Rebuild abundance with `python -m tssbias metaphlan --cohort hmp3_stool` into `{data_root}/mpa4_res/hmp3_stool/merged_mpa.txt`. On Gadi, `TSS_COHORT=hmp3_stool` and a 1–89 array cover the manifest.
+Stage paired FASTQs at `{data_root}/fastq/hmp3_stool/{SRR}_1.fastq.gz` and `{SRR}_2.fastq.gz`. The commands do not download this cohort. If a file is absent, `check-inputs` and `discover` exit 2 and write nothing. Rebuild abundance with `python -m tssbias metaphlan data/manifests/hmp3_stool.tsv` into `{data_root}/mpa4_res/hmp3_stool/merged_mpa.txt`. On Gadi, `TSS_COHORT=hmp3_stool` and a 1–89 array cover the manifest.
 
 ## Liu et al. (replaces ARG)
 
@@ -101,7 +101,7 @@ Source: Liu et al., Scientific Reports 2016, BioProject PRJNA328899, SRA study S
 
 The manifest is `data/manifests/liu2016.tsv` (110 runs, 110 samples). Selection rule: keep every public run in that BioProject. Each `sample_alias` (`Sample_001` through `Sample_112`, with `Sample_052` and `Sample_101` absent from the archive) and each BioSample has exactly one run, so the one-run-per-sample rule drops nothing. Rows are sorted by `sample_alias`, then `run_accession`.
 
-Stage paired FASTQs at `{data_root}/fastq/liu2016/{SRR}_1.fastq.gz` and `{SRR}_2.fastq.gz`. The commands do not download this cohort. If a file is absent, `check-inputs` and `discover` exit 2 and write nothing. Rebuild abundance with `python -m tssbias metaphlan --cohort liu2016` into `{data_root}/mpa4_res/liu2016/merged_mpa.txt`. On Gadi, `TSS_COHORT=liu2016` and a 1–110 array cover the manifest.
+Stage paired FASTQs at `{data_root}/fastq/liu2016/{SRR}_1.fastq.gz` and `{SRR}_2.fastq.gz`. The commands do not download this cohort. If a file is absent, `check-inputs` and `discover` exit 2 and write nothing. Rebuild abundance with `python -m tssbias metaphlan data/manifests/liu2016.tsv` into `{data_root}/mpa4_res/liu2016/merged_mpa.txt`. On Gadi, `TSS_COHORT=liu2016` and a 1–110 array cover the manifest.
 
 ## iHMP (HMP2)
 
@@ -140,6 +140,14 @@ python -m tssbias download data/manifests/hmp2.tsv
 
 The path is the manifest. `sample_id` is the SRA run. Files land in `{data_root}/fastq/<manifest stem>/{SRR}_1.fastq.gz` and `_2.fastq.gz` (`hmp2.tsv` → `fastq/hmp2/`). `rna_id` is written under `rna/`, and `longread_srr` under `longread/`, with the same `{SRR}_1` / `_2` names when the dump is paired. A single-end dump is kept as the one file `fasterq-dump` wrote. Runs already on disk are skipped. The command exits if `fasterq-dump` is not on `PATH`. On Gadi, put that same command in a PBS job. Analysis commands still do not download reads themselves.
 
+## Species abundance
+
+```bash
+python -m tssbias metaphlan data/manifests/hmp2.tsv
+```
+
+The path is the manifest. FASTQs are the files already staged for that cohort (`fastq_dir` in the config; Illumina `{sample_id}_1.fastq.gz` and `_2`, long read `{sample_id}.fastq.gz`). The command does not download them. A missing FASTQ exits 2 and writes nothing. `metaphlan` must be on `PATH` (MetaPhlAn 4.1.0 in `environment.yml`). Profiles land in `{data_root}/mpa4_res/<cohort>/{sample_id}.txt`. The merged species table, which `discover` and the other abundance screens read, is `{data_root}/mpa4_res/<cohort>/merged_mpa.txt`. The same command covers every manifest, including `franzosa_rnalater.tsv` (`mpa4_res/franzosa/`), `matched_longread.tsv` (`mpa4_res/matched/`), PacBio, and Nanopore. On Gadi, `jobs/gadi/metaphlan.pbs` with `TSS_COHORT` profiles one array index; rerun the command with no index to merge.
+
 ## ATCC MSA-1003
 
 `data/manifests/mock.tsv` is one Illumina run, `SRR8359173` (PRJNA510527). `longread_srr` is the HiFi run `SRR11606871` (PRJNA627939). The 20 ATCC genomes stay as the RefSeq URL list in `tssbias/commands/mock.py`.
@@ -163,7 +171,7 @@ A full rerun needs, on Gadi or another machine:
 
 * NCI project code (`TSS_PROJECT`) and `config/gadi.local.yaml` (`/g/data/{project}` for references and results, `/scratch/{project}` for BAMs and bigWigs).
 * FASTQs named `{sample}_1.fastq.gz` and `{sample}_2.fastq.gz` (Illumina) or `{sample}.fastq.gz` (PacBio, Nanopore) under each cohort's `fastq_dir`.
-* `mpa4_res/merged_mpa.txt` from `metaphlan` (the methods text says MetaPhlAn3; pin the binary you intend).
+* `{data_root}/mpa4_res/<cohort>/merged_mpa.txt` from `python -m tssbias metaphlan data/manifests/<name>.tsv` (MetaPhlAn 4.1.0).
 * Prodigal 2.6.3, Bowtie2, BWA, samtools, deepTools `bamCoverage`, kallisto, and the extra tools named in `environment.yml` for ART, MEGAHIT, MetaBAT2, Kraken2, CheckM2, sylph, minimap2, and Promotech.
 * Kraken2 DB (`software.kraken_db`) for MAG bin selection. Promotech checkout (`PROMOTECH_HOME`). The `align` package (`align.calign`, DNAFULL) for upstream scores.
 * Mock community: the 20 ATCC genomes and `SRR8359173` reads concatenated/staged as `check-inputs` does not cover `mock`; the command prints the expected paths. HiFi accession in the original download script is `SRR11606871`.

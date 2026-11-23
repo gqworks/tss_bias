@@ -96,16 +96,11 @@ with open('matched_dataset_idlist') as f:
     samples = f.read().splitlines()
 samples = [x.split('\t') for x in samples]
 
-#Run metaphlan
-for samp in samples:
-    if not os.path.exists(f'metaphlan3_res/{samp[0]}.txt'):
-        subprocess.call(f'metaphlan primary_seq/{samp[1]}_1.fastq,primary_seq/{samp[1]}_2.fastq --input_type fastq --bowtie2out metaphlan3_res/{samp[0]}.bowtie2.bz2 --nproc 64 -o metaphlan3_res/{samp[0]}.txt', shell=True)
-
-#Read species abundances
-mpa_res = pd.read_table('metaphlan3_res/merged_mpa.txt', comment= '#')
+# Species abundances: python -m tssbias metaphlan data/manifests/matched_longread.tsv
+mpa_res = pd.read_table('../staged_data/mpa4_res/matched/merged_mpa.txt', comment= '#')
 mpa_res = mpa_res[mpa_res['clade_name'].str.contains("s__")]
 mpa_res.index = [re.match('.*\|([^\|]*)',x).group(1) for x in mpa_res['clade_name']]
-mpa_res = mpa_res.drop(columns=['clade_name','NCBI_tax_id'])
+mpa_res = mpa_res.drop(columns=[col for col in ('clade_name', 'NCBI_tax_id') if col in mpa_res.columns])
 mpa_res = mpa_res.loc[(mpa_res > 0.5).sum(axis=1) > 5,:] # Filter species with atleast 0.5% abundance in more than 5 samples
 mpa_res = mpa_res.where(mpa_res > 0.5, np.nan)
 mpa_res = mpa_res.rename(index={'s__Bacteroides_vulgatus': 's__Phocaeicola_vulgatus', 's__Eubacterium_hallii':'s__Anaerobutyricum_hallii'})

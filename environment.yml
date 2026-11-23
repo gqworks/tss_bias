@@ -25,5 +25,5 @@ dependencies:
 #   CheckM2 (optional HQ flag for mag-bias; the command runs without it)
 #   Python package "align" providing align.calign and align.matrix.DNAFULL (upstream-scores)
 # Prodigal 2.6.3 is the version named in the manuscript. Other versions are the rerun pins,
-# not a claim that the original lab binaries matched them. The methods text says MetaPhlAn3;
-# this env pins MetaPhlAn 4 because the merged table the analyses read is mpa4_res/.
+# not a claim that the original lab binaries matched them. MetaPhlAn 4.1.0 writes
+# {data_root}/mpa4_res/<cohort>/merged_mpa.txt. The repository does not ship profiles.

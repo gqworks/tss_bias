@@ -85,7 +85,7 @@ def test_discover_fails_clearly_without_gadi_inputs(capsys):
     captured = capsys.readouterr()
     assert code == 2
     assert "Missing inputs" in captured.err
-    assert "merged_mpa.txt" in captured.err
+    assert "mpa4_res/hmp2/merged_mpa.txt" in captured.err
     assert "No results were written" in captured.err
 
 
@@ -254,3 +254,51 @@ def test_mock_cohort_uses_one_manifest_and_does_not_download(capsys):
     captured = capsys.readouterr()
     assert code == 2
     assert "fastq/matched_longread/longread/" in captured.err
+
+
+def test_abundance_tables_are_metaphlan4_outputs():
+    from tssbias.config import load_config
+
+    cfg = load_config()
+    assert not (cfg.repo_root / "metaphlan3_res").exists()
+    assert not (cfg.repo_root / "mock_community_analysis" / "metaphlan3_res").exists()
+    for name, cohort in cfg.cohorts.items():
+        assert cohort.abundance_table == cfg.data_root / "mpa4_res" / name / "merged_mpa.txt"
+    assert cfg.mpa_merged == cfg.cohort("hmp2").abundance_table
+
+
+def test_metaphlan_fails_when_fastqs_are_absent(capsys):
+    code = main(["metaphlan", "data/manifests/hmp2.tsv"])
+    captured = capsys.readouterr()
+    assert code == 2
+    assert "does not download FASTQs" in captured.err
+    assert "fastq/hmp2/SRR5947813_1.fastq.gz" in captured.err
+    assert "fastq/hmp2/SRR5947813_2.fastq.gz" in captured.err
+    assert "No results were written" in captured.err
+    code = main(["metaphlan", "data/manifests/pacbio.tsv", "--sample-index", "0"])
+    captured = capsys.readouterr()
+    assert code == 2
+    assert "fastq/pacbio/SRR15489020.fastq.gz" in captured.err
+    code = main(["metaphlan", "data/manifests/does-not-exist.tsv"])
+    captured = capsys.readouterr()
+    assert code == 2
+    assert "does-not-exist.tsv" in captured.err
+
+
+def test_metaphlan_merge_keeps_species_columns(tmp_path):
+    from tssbias.commands.metaphlan import _merge
+
+    one = tmp_path / "s1.txt"
+    two = tmp_path / "s2.txt"
+    one.write_text(
+        "clade_name\tNCBI_tax_id\trelative_abundance\n"
+        "k__Bacteria|s__A\t1\t10\n"
+        "k__Bacteria|s__B\t2\t1\n"
+    )
+    two.write_text("clade_name\trelative_abundance\nk__Bacteria|s__A\t4\nk__Bacteria|s__C\t6\n")
+    merged = _merge([one, two], ["s1", "s2"])
+    assert list(merged.columns) == ["clade_name", "s1", "s2"]
+    row = merged.set_index("clade_name")
+    assert row.loc["k__Bacteria|s__A", "s1"] == 10
+    assert row.loc["k__Bacteria|s__A", "s2"] == 4
+    assert row.loc["k__Bacteria|s__C", "s1"] == 0

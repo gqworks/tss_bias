@@ -17,13 +17,13 @@ paths:
   bams_dir: "{scratch_root}/bams"
   bigwig_dir: "{scratch_root}/bigwig"
   matrices_dir: "{results_dir}/matrices"
-  mpa_merged: "{data_root}/mpa4_res/merged_mpa.txt"
+  mpa_merged: "{data_root}/mpa4_res/hmp2/merged_mpa.txt"
   kallisto_dir: "{results_dir}/kallisto"
   assembled_dir: "{scratch_root}/assembled_ref"
   promotech_dir: "{results_dir}/promotech"
   sketches_dir: "{scratch_root}/sketches"
-  pacbio_abundance: "{repo_root}/src/pacbio_merged_mpa.tsv"
-  nanopore_abundance: "{repo_root}/src/nanopore_merged_mpa.tsv"
+  pacbio_abundance: "{data_root}/mpa4_res/pacbio/merged_mpa.txt"
+  nanopore_abundance: "{data_root}/mpa4_res/nanopore/merged_mpa.txt"
 
 compute:
   threads: 8
@@ -78,7 +78,7 @@ cohorts:
     abundance_min_pct: 0.5
     abundance_min_samples: 30
     species_set: hmp2
-    abundance_table: "{data_root}/mpa4_res/merged_mpa.txt"
+    abundance_table: "{data_root}/mpa4_res/hmp2/merged_mpa.txt"
     bioproject: PRJNA389280
     paired_rna: true
   franzosa:
@@ -88,7 +88,7 @@ cohorts:
     abundance_min_pct: 0.5
     abundance_min_samples: 5
     species_set: franzosa
-    abundance_table: "{data_root}/mpa4_res/merged_mpa.txt"
+    abundance_table: "{data_root}/mpa4_res/franzosa/merged_mpa.txt"
     bioproject: PRJNA188481
     paired_rna: false
   # Liu et al. 2016. Display name is exactly "Liu et al." All 110 public runs.
@@ -122,7 +122,7 @@ cohorts:
     abundance_min_pct: 0.5
     abundance_min_samples: 4
     species_set: longread
-    abundance_table: "{repo_root}/src/pacbio_merged_mpa.tsv"
+    abundance_table: "{data_root}/mpa4_res/pacbio/merged_mpa.txt"
     bioproject: PRJNA754443
     paired_rna: false
   nanopore:
@@ -132,7 +132,7 @@ cohorts:
     abundance_min_pct: 0.5
     abundance_min_samples: 4
     species_set: longread
-    abundance_table: "{repo_root}/src/nanopore_merged_mpa.tsv"
+    abundance_table: "{data_root}/mpa4_res/nanopore/merged_mpa.txt"
     bioproject: PRJNA820119
     paired_rna: false
   # ATCC MSA-1003. One Illumina run. HiFi accession is longread_srr.
@@ -144,7 +144,7 @@ cohorts:
     abundance_min_pct: 0.5
     abundance_min_samples: 1
     species_set: mock
-    abundance_table: ""
+    abundance_table: "{data_root}/mpa4_res/mock/merged_mpa.txt"
     bioproject: PRJNA510527
     paired_rna: false
   matched:
@@ -154,6 +154,6 @@ cohorts:
     abundance_min_pct: 0.5
     abundance_min_samples: 5
     species_set: matched
-    abundance_table: "{data_root}/mpa4_res/matched_merged_mpa.txt"
+    abundance_table: "{data_root}/mpa4_res/matched/merged_mpa.txt"
     bioproject: PRJNA820119
     paired_rna: false
