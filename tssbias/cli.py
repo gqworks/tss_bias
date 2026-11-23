@@ -6,7 +6,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from tssbias.commands import check_inputs, correlations, discover, expression, five_prime, gc_lmm
+from tssbias.commands import check_inputs, correlations, discover, download, expression, five_prime, gc_lmm
 from tssbias.commands import mag, mappability, matched, metaphlan, mismatch, mock, permutation
 from tssbias.commands import prepare_references, promotech, substitutions, sylph, upstream
 from tssbias.commands.common import add_cohort_args
@@ -66,6 +66,16 @@ def main(argv: list[str] | None = None) -> int:
     platforms.set_defaults(func=correlations.run_platforms)
     mock_cmd = sub.add_parser("mock", help="ATCC MSA-1003 mock community coverage bias.")
     mock_cmd.set_defaults(func=mock.run)
+    download_cmd = sub.add_parser(
+        "download",
+        help="Download SRA FASTQs named in a manifest with fasterq-dump.",
+    )
+    download_cmd.add_argument(
+        "manifest",
+        type=Path,
+        help="Manifest TSV. FASTQs go to {data_root}/fastq/<filename stem>/",
+    )
+    download_cmd.set_defaults(func=download.run)
     matched_cmd = sub.add_parser("matched-longread", help="Short reads aligned to same-sample long reads.")
     matched_cmd.add_argument("--sample", default=None)
     matched_cmd.add_argument("--sample-index", type=int, default=None)

@@ -179,7 +179,7 @@ def test_public_manifests_use_sra_run_ids():
         "hmp2": (78, "PRJNA389280", "SRP115812", True),
         "franzosa": (8, "PRJNA188481", "SRP019038", False),
         "pacbio": (11, "PRJNA754443", "SRP332749", False),
-        "nanopore": (10, "PRJNA820119", "SRP366030", False),
+        "nanopore": (20, "PRJNA820119", "SRP366030", False),
         "matched": (10, "PRJNA820119", "SRP366030", False),
     }
     for name, (n, project, study, paired) in expected.items():
@@ -211,7 +211,8 @@ def test_public_manifests_use_sra_run_ids():
     assert [sample.longread_id for sample in samples] == matched["longread_srr"].tolist()
     assert set(matched["library_layout"]) == {"PAIRED"}
     nanopore = pd.read_csv(cfg.cohort("nanopore").manifest, sep="\t", dtype=str)
-    assert set(matched["longread_srr"]) == set(nanopore["sample_id"])
+    assert set(nanopore["sample_alias"]) == {f"CD{i}" for i in range(81, 101)}
+    assert set(matched["longread_srr"]) <= set(nanopore["sample_id"])
     assert set(nanopore["library_layout"]) == {"SINGLE"}
 
 

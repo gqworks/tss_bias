@@ -128,9 +128,17 @@ These three manifests use the same columns. `sample_id` is the SRA run. No clust
 
 `data/manifests/pacbio.tsv` is 11 Sequel II WGS runs, BioProject PRJNA754443, SRA study SRP332749. Layout is `SINGLE`. Aliases are `1_baseline` through `6_baseline` and the matching `*_treatment` rows.
 
-`data/manifests/nanopore.tsv` is 10 PromethION WGS runs, BioProject PRJNA820119, SRA study SRP366030. Layout is `SINGLE`. Aliases are `CD91`–`CD100`.
+`data/manifests/nanopore.tsv` is 20 PromethION WGS runs, BioProject PRJNA820119, SRA study SRP366030. Layout is `SINGLE`. The project has 200 ONT gut shotgun runs (CD1–CD100 and TD1–TD100), one run per alias. This manifest keeps the previous CD91–CD100 block and the ten preceding CD aliases, CD81–CD100. Each alias has one run, so nothing is dropped inside that block. CD1–CD80 and the TD series are not included.
 
-`data/manifests/matched_longread.tsv` is the 10 Illumina NovaSeq runs from the same BioProject, one per donor. `sample_id` is that paired-end WGS run. `longread_srr` is the PromethION run whose alias is the same `CD` id (the Nanopore manifest). The short-read and long-read deposits are different BioSamples, so both accessions stay on the row. The commands do not download either FASTQ.
+`data/manifests/matched_longread.tsv` is the 10 Illumina NovaSeq runs from the same BioProject, one per donor (CD91–CD100). `sample_id` is that paired-end WGS run. `longread_srr` is the PromethION run whose alias is the same `CD` id. The short-read and long-read deposits are different BioSamples, so both accessions stay on the row.
+
+## Download FASTQs
+
+```bash
+python -m tssbias download data/manifests/hmp2.tsv
+```
+
+The path is the manifest. `sample_id` is the SRA run. Files land in `{data_root}/fastq/<manifest stem>/{SRR}_1.fastq.gz` and `_2.fastq.gz` (`hmp2.tsv` → `fastq/hmp2/`). `rna_id` is written under `rna/`, and `longread_srr` under `longread/`, with the same `{SRR}_1` / `_2` names when the dump is paired. A single-end dump is kept as the one file `fasterq-dump` wrote. Runs already on disk are skipped. The command exits if `fasterq-dump` is not on `PATH`. On Gadi, put that same command in a PBS job. Analysis commands still do not download reads themselves.
 
 ## What runs here, and what needs Gadi
 
