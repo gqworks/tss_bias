@@ -12,13 +12,13 @@ def get_cor_mat(asm):
     hmp2_samples_bias = np.array([get_bias_from_mat(asm,samp) for samp in hmp2_samples])
     Franzosa_samples_bias = np.array([get_bias_from_mat(asm,samp) for samp in Franzosa_samples])
     arg_samples_bias = np.array([get_bias_from_mat(asm,samp) for samp in arg_samples])
-    hyp_samples_bias = np.array([get_bias_from_mat(asm,samp) for samp in hyp_samples])
+    hmp3_stool_bias = np.array([get_bias_from_mat(asm,samp) for samp in hmp3_stool_samples])
     
     hmp2_samples_bias = hmp2_samples_bias[[False if len(x)==1 else True for x in hmp2_samples_bias]]
     Franzosa_samples_bias = Franzosa_samples_bias[[False if len(x)==1 else True for x in Franzosa_samples_bias]]
     arg_samples_bias = arg_samples_bias[[False if len(x)==1 else True for x in arg_samples_bias]]
-    hyp_samples_bias = hyp_samples_bias[[False if len(x)==1 else True for x in hyp_samples_bias]]
-    all_bias_groups = [hmp2_samples_bias,Franzosa_samples_bias,arg_samples_bias,hyp_samples_bias]
+    hmp3_stool_bias = hmp3_stool_bias[[False if len(x)==1 else True for x in hmp3_stool_bias]]
+    all_bias_groups = [hmp2_samples_bias,Franzosa_samples_bias,arg_samples_bias,hmp3_stool_bias]
     cor_vals = []
     p_vals = []
     for x in all_bias_groups:
@@ -96,13 +96,13 @@ def get_null_mat(asm):
     hmp2_samples_bias = np.array([get_null_bias_from_mat(asm,samp,tss_dat) for samp in hmp2_samples])
     Franzosa_samples_bias = np.array([get_null_bias_from_mat(asm,samp,tss_dat) for samp in Franzosa_samples])
     arg_samples_bias = np.array([get_null_bias_from_mat(asm,samp,tss_dat) for samp in arg_samples])
-    hyp_samples_bias = np.array([get_null_bias_from_mat(asm,samp,tss_dat) for samp in hyp_samples])
+    hmp3_stool_bias = np.array([get_null_bias_from_mat(asm,samp,tss_dat) for samp in hmp3_stool_samples])
     
     hmp2_samples_bias = hmp2_samples_bias[[False if len(x)==1 else True for x in hmp2_samples_bias]]
     Franzosa_samples_bias = Franzosa_samples_bias[[False if len(x)==1 else True for x in Franzosa_samples_bias]]
     arg_samples_bias = arg_samples_bias[[False if len(x)==1 else True for x in arg_samples_bias]]
-    hyp_samples_bias = hyp_samples_bias[[False if len(x)==1 else True for x in hyp_samples_bias]]
-    null_bias_groups = [hmp2_samples_bias,Franzosa_samples_bias,arg_samples_bias,hyp_samples_bias]
+    hmp3_stool_bias = hmp3_stool_bias[[False if len(x)==1 else True for x in hmp3_stool_bias]]
+    null_bias_groups = [hmp2_samples_bias,Franzosa_samples_bias,arg_samples_bias,hmp3_stool_bias]
     cor_vals = []
     p_vals = []
     for x in null_bias_groups:
@@ -130,9 +130,8 @@ with open('sample_lists/arg_samples') as f:
     arg_samples = f.read().splitlines()
 arg_samples = [x.rsplit('\t',1)[0] for x in arg_samples]
 
-with open('sample_lists/hyp_samples') as f:
-    hyp_samples = f.read().splitlines()
-hyp_samples = [x.rsplit('\t',1)[0] for x in hyp_samples]
+# Public HMP Phase III stool subset. sample_id values are SRA run accessions.
+hmp3_stool_samples = pd.read_csv('data/manifests/hmp3_stool.tsv', sep='\t')['sample_id'].tolist()
 
 #Read species abundances
 mpa_res = pd.read_table('mpa4_res/merged_mpa.txt', comment= '#')
@@ -143,7 +142,7 @@ mpa_res = mpa_res.drop(columns=['clade_name','NCBI_tax_id'])
 mpa_res = mpa_res.loc[((mpa_res[Franzosa_samples] > 0.5).sum(axis=1) >= 5) & 
                       ((mpa_res[hmp2_samples] > 0.5).sum(axis=1) >= 30) &
                       ((mpa_res[arg_samples] > 0.5).sum(axis=1) >= 5) & 
-                      ((mpa_res[hyp_samples] > 0.5).sum(axis=1) >= 5),:]
+                      ((mpa_res[hmp3_stool_samples] > 0.5).sum(axis=1) >= 5),:]
 mpa_res = mpa_res.where(mpa_res > 0.5, np.nan)
 
 all_genomes = {'s__Phocaeicola_vulgatus': 'GCF_000012825.1_ASM1282v1',
@@ -155,7 +154,7 @@ all_genomes = {'s__Phocaeicola_vulgatus': 'GCF_000012825.1_ASM1282v1',
 
 all_spe_mat = np.zeros((4, 4))
 all_p_mat = np.zeros((4, 4))
-axis_labels = ['HMP2','Franzosa','ARG','HYP']
+axis_labels = ['HMP2','Franzosa','ARG','HMP3']
 diag = []
 triangle = []
 for species in  all_genomes.keys():
@@ -191,7 +190,7 @@ stats.ttest_ind(diag, triangle) # Ttest_indResult(statistic=2.6765768715298925, 
 ### Get Null ###
 all_spe_mat = np.zeros((4, 4))
 all_p_mat = np.zeros((4, 4))
-axis_labels = ['HMP2','Franzosa','ARG','HYP']
+axis_labels = ['HMP2','Franzosa','ARG','HMP3']
 for species in  all_genomes.keys():
     asm = all_genomes[species]
     cor_mat, p_mat = get_null_mat(asm)

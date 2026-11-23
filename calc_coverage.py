@@ -201,16 +201,19 @@ with open('sample_lists/arg_samples') as f:
     arg_samples = f.read().splitlines()
 arg_samples = {x.split('\t')[0]:x.split('\t')[1] for x in arg_samples}
 
-with open('sample_lists/hyp_samples') as f:
-    hyp_samples = f.read().splitlines()
-hyp_samples = {x.split('\t')[0]:x.split('\t')[1] for x in hyp_samples}
+# Public HMP Phase III stool runs. FASTQs are {TSS_DATA_ROOT}/fastq/hmp3_stool/{SRR}_1.fastq.gz.
+hmp3_stool_fastq_dir = os.path.join(os.environ.get('TSS_DATA_ROOT', 'staged_data'), 'fastq', 'hmp3_stool')
+hmp3_stool_samples = {
+    sample_id: hmp3_stool_fastq_dir
+    for sample_id in pd.read_csv('data/manifests/hmp3_stool.tsv', sep='\t')['sample_id']
+}
 
-merged_samples = {**franzosa_samples, **hmp2_samples, **arg_samples, **hyp_samples}
+merged_samples = {**franzosa_samples, **hmp2_samples, **arg_samples, **hmp3_stool_samples}
 alt_illumina_mpa = mpa_res.loc[:,merged_samples.keys()]
 alt_illumina_mpa = alt_illumina_mpa.loc[((alt_illumina_mpa[franzosa_samples.keys()] > 0.5).sum(axis=1) >= 5) & 
                                ((alt_illumina_mpa[hmp2_samples.keys()] > 0.5).sum(axis=1) >= 30) &
                                ((alt_illumina_mpa[arg_samples.keys()] > 0.5).sum(axis=1) >= 5) & 
-                               ((alt_illumina_mpa[hyp_samples.keys()] > 0.5).sum(axis=1) >= 5),:]
+                               ((alt_illumina_mpa[hmp3_stool_samples.keys()] > 0.5).sum(axis=1) >= 5),:]
 alt_illumina_mpa = alt_illumina_mpa.where(alt_illumina_mpa > 0.5, np.nan)
 
 selected_genomes = dict.fromkeys(alt_illumina_mpa.index)
