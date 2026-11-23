@@ -1,0 +1,10 @@
+#!/bin/bash
+#PBS -N tss_fdr
+#PBS -q normal
+#PBS -l ncpus=4,mem=16GB,walltime=02:00:00
+#PBS -j oe
+# Benjamini-Hochberg FDR across permutation results already written by the array.
+set -euo pipefail
+cd "${PBS_O_WORKDIR}"
+export TSS_CONFIG="${TSS_CONFIG:-${PBS_O_WORKDIR}/config/gadi.local.yaml}"
+python -m tssbias permutation --cohort "${TSS_COHORT:-hmp2}" --fdr-only

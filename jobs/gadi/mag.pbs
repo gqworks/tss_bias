@@ -1,0 +1,15 @@
+#!/bin/bash
+#PBS -N tss_mag
+#PBS -q normal
+#PBS -l ncpus=16,mem=128GB,walltime=48:00:00
+#PBS -j oe
+# MEGAHIT + MetaBAT2 + Kraken2. software.kraken_db must be set in the config.
+set -euo pipefail
+cd "${PBS_O_WORKDIR}"
+export TSS_CONFIG="${TSS_CONFIG:-${PBS_O_WORKDIR}/config/gadi.local.yaml}"
+cohort="${TSS_COHORT:-hmp2}"
+if [[ -n "${PBS_ARRAY_INDEX:-}" ]]; then
+  python -m tssbias mag-bias --cohort "${cohort}" --sample-index "$((PBS_ARRAY_INDEX - 1))"
+else
+  python -m tssbias mag-bias --cohort "${cohort}"
+fi

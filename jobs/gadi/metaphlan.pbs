@@ -1,0 +1,14 @@
+#!/bin/bash
+#PBS -N tss_mpa
+#PBS -q normal
+#PBS -l ncpus=16,mem=64GB,walltime=12:00:00
+#PBS -j oe
+set -euo pipefail
+cd "${PBS_O_WORKDIR}"
+export TSS_CONFIG="${TSS_CONFIG:-${PBS_O_WORKDIR}/config/gadi.local.yaml}"
+cohort="${TSS_COHORT:-hmp2}"
+if [[ -n "${PBS_ARRAY_INDEX:-}" ]]; then
+  python -m tssbias metaphlan --cohort "${cohort}" --sample-index "$((PBS_ARRAY_INDEX - 1))"
+else
+  python -m tssbias metaphlan --cohort "${cohort}"
+fi

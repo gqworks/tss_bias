@@ -1,0 +1,139 @@
+# Copy to config/gadi.local.yaml and export TSS_CONFIG=$PWD/config/gadi.local.yaml
+# Project code comes from TSS_PROJECT or gadi.project. Do not hard-code a
+# /groups/cgsd path; durable files live on gdata and BAMs on scratch.
+
+gadi:
+  project: ""          # or set TSS_PROJECT=ab12
+  queue: normal
+  walltime: "24:00:00"
+  ncpus: 16
+  mem: "64GB"
+
+paths:
+  data_root: "/g/data/{project}/tss_bias"
+  scratch_root: "/scratch/{project}/tss_bias"
+  results_dir: "/g/data/{project}/tss_bias/results"
+  refseq_dir: "{data_root}/refseq_genomes"
+  bams_dir: "{scratch_root}/bams"
+  bigwig_dir: "{scratch_root}/bigwig"
+  matrices_dir: "{results_dir}/matrices"
+  mpa_merged: "{data_root}/mpa4_res/merged_mpa.txt"
+  kallisto_dir: "{results_dir}/kallisto"
+  assembled_dir: "{scratch_root}/assembled_ref"
+  promotech_dir: "{results_dir}/promotech"
+  sketches_dir: "{scratch_root}/sketches"
+  pacbio_abundance: "{repo_root}/src/pacbio_merged_mpa.tsv"
+  nanopore_abundance: "{repo_root}/src/nanopore_merged_mpa.tsv"
+
+compute:
+  threads: 16
+
+analysis:
+  seed: 1
+  window_bp: 500
+  n_permutations: 500
+  longread_permutations: 100
+  fdr_alpha: 0.05
+  tpm_low: 100
+  tpm_mid: 1000
+  tpm_pseudocount: 0.001
+  bowtie2_mp: [8, 6, 4, 2]
+  read_length: 150
+  five_prime_window: 50
+  five_prime_upstream_shift: 10
+  five_prime_offsets: [0, 100, 200, 300, 400]
+  min_gene_bp_five_prime: 500
+  flank_buffer_bp: 5
+  longread_min_read_bp: 10000
+  longread_subsample: 100000
+  longread_min_gene_bp: 1000
+  mapq_min: 40
+  mag_min_fraction: 80
+  mag_hq_completeness: 90
+  mag_hq_contamination: 5
+  promotech_bp: 100
+  promotech_score_threshold: 0.7
+  art_args: ["-na", "-ss", "HS25", "-p", "-l", "150", "-c", "500000", "-m200", "-s", "10"]
+  correlation_min_pct: 0.5
+  correlation_min_samples: 5
+  correlation_balance_n: 20
+
+software:
+  kraken_db: ""        # directory passed to kraken2 --db
+  metaphlan_db: ""     # MetaPhlAn database directory, if not the default
+  promotech_home: ""   # directory containing promotech.py; or set PROMOTECH_HOME
+
+figshare:
+  project_url: "https://figshare.com/projects/Metagenomic_coverage_bias_at_transcription_start_sites_is_correlated_with_gene_expression/242600"
+
+cohorts:
+  hmp2:
+    manifest: "{repo_root}/data/manifests/hmp2.tsv"
+    fastq_dir: "{data_root}/fastq/hmp2"
+    seq_type: illumina
+    abundance_min_pct: 0.5
+    abundance_min_samples: 30
+    species_set: hmp2
+    abundance_table: "{data_root}/mpa4_res/merged_mpa.txt"
+    bioproject: PRJNA389280
+    paired_rna: true
+  franzosa:
+    manifest: "{repo_root}/data/manifests/franzosa_rnalater.tsv"
+    fastq_dir: "{data_root}/fastq/franzosa"
+    seq_type: illumina
+    abundance_min_pct: 0.5
+    abundance_min_samples: 5
+    species_set: franzosa
+    abundance_table: "{data_root}/mpa4_res/merged_mpa.txt"
+    bioproject: ""
+    paired_rna: false
+  arg:
+    manifest: "{repo_root}/data/manifests/arg.tsv"
+    fastq_dir: "{data_root}/fastq/arg"
+    seq_type: illumina
+    abundance_min_pct: 0.5
+    abundance_min_samples: 10
+    species_set: arg
+    abundance_table: "{data_root}/mpa4_res/merged_mpa.txt"
+    bioproject: ""
+    paired_rna: false
+  hyp:
+    manifest: "{repo_root}/data/manifests/hyp.tsv"
+    fastq_dir: "{data_root}/fastq/hyp"
+    seq_type: illumina
+    abundance_min_pct: 0.5
+    abundance_min_samples: 5
+    species_set: correlation
+    abundance_table: "{data_root}/mpa4_res/merged_mpa.txt"
+    bioproject: ""
+    paired_rna: false
+  pacbio:
+    manifest: "{repo_root}/data/manifests/pacbio.tsv"
+    fastq_dir: "{data_root}/fastq/pacbio"
+    seq_type: pacbio
+    abundance_min_pct: 0.5
+    abundance_min_samples: 4
+    species_set: longread
+    abundance_table: "{repo_root}/src/pacbio_merged_mpa.tsv"
+    bioproject: ""
+    paired_rna: false
+  nanopore:
+    manifest: "{repo_root}/data/manifests/nanopore.tsv"
+    fastq_dir: "{data_root}/fastq/nanopore"
+    seq_type: nanopore
+    abundance_min_pct: 0.5
+    abundance_min_samples: 4
+    species_set: longread
+    abundance_table: "{repo_root}/src/nanopore_merged_mpa.tsv"
+    bioproject: ""
+    paired_rna: false
+  matched:
+    manifest: "{repo_root}/data/manifests/matched_longread.tsv"
+    fastq_dir: "{data_root}/fastq/matched_illumina"
+    seq_type: illumina
+    abundance_min_pct: 0.5
+    abundance_min_samples: 5
+    species_set: matched
+    abundance_table: "{data_root}/mpa4_res/matched_merged_mpa.txt"
+    bioproject: ""
+    paired_rna: false

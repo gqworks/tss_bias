@@ -1,0 +1,18 @@
+#!/bin/bash
+#PBS -N tss_discover
+#PBS -q normal
+#PBS -l ncpus=16,mem=64GB,walltime=24:00:00
+#PBS -j oe
+# Primary Illumina (or other) discovery, one manifest row per array index.
+# Submit with -J 1-N, N = number of manifest rows (78 for hmp2):
+#   TSS_COHORT=hmp2 bash jobs/gadi/submit.sh jobs/gadi/discover.pbs
+# and add -J 1-78 on the qsub line, or export PBS via `qsub -J 1-78`.
+set -euo pipefail
+cd "${PBS_O_WORKDIR}"
+export TSS_CONFIG="${TSS_CONFIG:-${PBS_O_WORKDIR}/config/gadi.local.yaml}"
+cohort="${TSS_COHORT:-hmp2}"
+if [[ -n "${PBS_ARRAY_INDEX:-}" ]]; then
+  python -m tssbias discover --cohort "${cohort}" --sample-index "$((PBS_ARRAY_INDEX - 1))"
+else
+  python -m tssbias discover --cohort "${cohort}"
+fi
