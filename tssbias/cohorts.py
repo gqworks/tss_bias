@@ -176,6 +176,24 @@ def fastq_paths(fastq_dir: Path, sample_id: str, seq_type: str) -> list[Path]:
     return [fastq_dir / f"{sample_id}.fastq.gz"]
 
 
+def longread_fastq(directory: Path, srr: str) -> Path | None:
+    """FASTQ written by ``download`` for one long-read accession.
+
+    A paired dump is ``{srr}_1.fastq.gz`` and ``_2``. A single-end dump is
+    ``{srr}.fastq.gz``, or ``{srr}_1.fastq.gz`` when that is the only file
+    ``fasterq-dump`` emitted. Returns the file to align, or None when neither
+    single-end name is present.
+    """
+    single = directory / f"{srr}.fastq.gz"
+    if single.exists():
+        return single
+    mate1 = directory / f"{srr}_1.fastq.gz"
+    mate2 = directory / f"{srr}_2.fastq.gz"
+    if mate1.exists() and not mate2.exists():
+        return mate1
+    return None
+
+
 def require_existing(what: str, paths: list[Path]) -> None:
     """Wrapper so commands share one missing-input message."""
     require_paths(what, paths)

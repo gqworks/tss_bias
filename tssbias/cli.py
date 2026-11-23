@@ -65,6 +65,11 @@ def main(argv: list[str] | None = None) -> int:
     platforms = sub.add_parser("platform-comparison", help="Pearson correlation across Illumina, PacBio, and Nanopore.")
     platforms.set_defaults(func=correlations.run_platforms)
     mock_cmd = sub.add_parser("mock", help="ATCC MSA-1003 mock community coverage bias.")
+    mock_cmd.add_argument(
+        "--hifi",
+        action="store_true",
+        help="Contrast exact-strain bias with Illumina reads mapped to the HiFi reference.",
+    )
     mock_cmd.set_defaults(func=mock.run)
     download_cmd = sub.add_parser(
         "download",

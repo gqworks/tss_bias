@@ -140,6 +140,21 @@ python -m tssbias download data/manifests/hmp2.tsv
 
 The path is the manifest. `sample_id` is the SRA run. Files land in `{data_root}/fastq/<manifest stem>/{SRR}_1.fastq.gz` and `_2.fastq.gz` (`hmp2.tsv` → `fastq/hmp2/`). `rna_id` is written under `rna/`, and `longread_srr` under `longread/`, with the same `{SRR}_1` / `_2` names when the dump is paired. A single-end dump is kept as the one file `fasterq-dump` wrote. Runs already on disk are skipped. The command exits if `fasterq-dump` is not on `PATH`. On Gadi, put that same command in a PBS job. Analysis commands still do not download reads themselves.
 
+## ATCC MSA-1003
+
+`data/manifests/mock.tsv` is one Illumina run, `SRR8359173` (PRJNA510527). `longread_srr` is the HiFi run `SRR11606871` (PRJNA627939). The 20 ATCC genomes stay as the RefSeq URL list in `tssbias/commands/mock.py`.
+
+```bash
+python -m tssbias download data/manifests/mock.tsv
+python -m tssbias mock
+python -m tssbias five-prime --cohort mock
+python -m tssbias mock --hifi
+python -m tssbias download data/manifests/matched_longread.tsv
+python -m tssbias matched-longread
+```
+
+Illumina FASTQs land in `{data_root}/fastq/mock/`. The HiFi file lands in `{data_root}/fastq/mock/longread/`. Gut pairs land in `{data_root}/fastq/matched_longread/` and `{data_root}/fastq/matched_longread/longread/`. `mock` is the exact-strain no-bias control. `five-prime --cohort mock` is the 5′ check on that one sample. `--hifi` contrasts those reads mapped to the HiFi reference. `matched-longread` stays the gut same-sample test.
+
 ## What runs here, and what needs Gadi
 
 Without staged reads the test suite, `--help`, and `check-inputs` run. Every analysis command exits with a missing-input message until its files exist. Nothing in this pipeline fabricates coverage, p-values, or model coefficients.

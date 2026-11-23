@@ -32,16 +32,28 @@ def run(cfg: Config, args: argparse.Namespace) -> None:
         ``results/five_prime/{cohort}_ratios.csv``
         ``results/five_prime/{cohort}_tests.csv``
     """
+    cohort = cfg.cohort(args.cohort)
+    pairs = _pairs(cfg, cohort, args)
+    missing = []
+    for sample, species in pairs:
+        bam_path = cfg.bam_path(species.assembly, sample.sample_id)
+        tss_path = cfg.tss_table_path(species.assembly)
+        if not bam_path.exists():
+            missing.append(bam_path)
+        if not tss_path.exists():
+            missing.append(tss_path)
+    if missing:
+        raise MissingInputError(
+            f"5' enrichment for {cohort.name} needs the discovery BAM and TSS table. "
+            "This command does not download FASTQs.",
+            missing,
+        )
     import pysam
 
-    cohort = cfg.cohort(args.cohort)
-    pairs = passing_pairs(cfg, cohort, args)
     rows = []
     for sample, species in pairs:
         bam_path = cfg.bam_path(species.assembly, sample.sample_id)
         tss_path = cfg.tss_table_path(species.assembly)
-        if not bam_path.exists() or not tss_path.exists():
-            raise MissingInputError("5' enrichment needs the discovery BAM and TSS table", [bam_path, tss_path])
         tss = read_tss_table(tss_path)
         tss = tss.loc[tss["gene_length"] >= cfg.min_gene_bp_five_prime]
         with pysam.AlignmentFile(str(bam_path), "rb") as bam:
@@ -65,6 +77,22 @@ def run(cfg: Config, args: argparse.Namespace) -> None:
     write_table(out / f"{cohort.name}_ratios.csv", frame)
     write_table(out / f"{cohort.name}_tests.csv", _tests(frame))
     LOG.info("wrote 5' ratios for %s", cohort.name)
+
+
+def _pairs(cfg: Config, cohort, args: argparse.Namespace):
+    """Sample-species pairs. Mock is the one merged ATCC reference, not an abundance screen."""
+    if cohort.name != "mock":
+        return passing_pairs(cfg, cohort, args)
+    from tssbias.cohorts import read_manifest
+    from tssbias.config import Species
+
+    samples = read_manifest(cohort.manifest)
+    if args.sample is not None:
+        samples = [sample for sample in samples if sample.sample_id == args.sample]
+        if not samples:
+            raise MissingInputError(f"sample {args.sample} is not in the mock manifest", [cohort.manifest])
+    species = Species("ATCC MSA-1003", "mock_merged", "", None, ())
+    return [(sample, species) for sample in samples]
 
 
 def _count_cohort_window(bam, tss: pd.DataFrame, offset: int, cfg: Config, paired_only: bool) -> tuple[int, int]:

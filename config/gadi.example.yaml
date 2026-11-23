@@ -129,9 +129,20 @@ cohorts:
     abundance_table: "{repo_root}/src/nanopore_merged_mpa.tsv"
     bioproject: PRJNA820119
     paired_rna: false
+  mock:
+    display_name: "ATCC MSA-1003"
+    manifest: "{repo_root}/data/manifests/mock.tsv"
+    fastq_dir: "{data_root}/fastq/mock"
+    seq_type: illumina
+    abundance_min_pct: 0.5
+    abundance_min_samples: 1
+    species_set: mock
+    abundance_table: ""
+    bioproject: PRJNA510527
+    paired_rna: false
   matched:
     manifest: "{repo_root}/data/manifests/matched_longread.tsv"
-    fastq_dir: "{data_root}/fastq/matched_illumina"
+    fastq_dir: "{data_root}/fastq/matched_longread"
     seq_type: illumina
     abundance_min_pct: 0.5
     abundance_min_samples: 5

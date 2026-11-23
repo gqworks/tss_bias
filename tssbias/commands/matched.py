@@ -17,7 +17,7 @@ import numpy as np
 import pandas as pd
 from scipy.stats import ttest_rel
 
-from tssbias.cohorts import read_manifest
+from tssbias.cohorts import longread_fastq, read_manifest
 from tssbias.commands.common import write_table
 from tssbias.config import Config
 from tssbias.coverage import depth_from_bigwig, orient_windows
@@ -51,7 +51,8 @@ def run(cfg: Config, args: argparse.Namespace) -> None:
                 [cohort.manifest],
             )
         samples = [samples[args.sample_index]]
-    longread_dir = cfg.data_root / "fastq" / "matched_longread"
+    # download writes DNA under fastq/<manifest stem>/ and long reads under longread/.
+    longread_dir = cohort.fastq_dir / "longread"
     rows = []
     for sample in samples:
         if not sample.longread_id:
@@ -74,12 +75,24 @@ def run(cfg: Config, args: argparse.Namespace) -> None:
 
 
 def _one(cfg: Config, illumina_dir, longread_dir, sample: str, longread_id: str) -> list[dict]:
-    long_fastq = longread_dir / f"{longread_id}.fastq.gz"
+    long_fastq = longread_fastq(longread_dir, longread_id)
     r1 = illumina_dir / f"{sample}_1.fastq.gz"
     r2 = illumina_dir / f"{sample}_2.fastq.gz"
-    missing = [path for path in (long_fastq, r1, r2) if not path.exists()]
+    missing = [path for path in (r1, r2) if not path.exists()]
+    if long_fastq is None:
+        missing.extend(
+            [
+                longread_dir / f"{longread_id}.fastq.gz",
+                longread_dir / f"{longread_id}_1.fastq.gz",
+            ]
+        )
     if missing:
-        raise MissingInputError("matched short and long FASTQs", missing)
+        raise MissingInputError(
+            "matched short and long FASTQs. Stage them with "
+            "`python -m tssbias download data/manifests/matched_longread.tsv`. "
+            "This command does not download FASTQs.",
+            missing,
+        )
     work = cfg.scratch_root / "matched" / sample
     work.mkdir(parents=True, exist_ok=True)
     subset = work / "longreads.fa"

@@ -225,3 +225,32 @@ def test_hmp3_stool_discover_fails_when_fastqs_are_absent(capsys):
     assert "SRR2175645_2.fastq.gz" in captured.err
     assert "hmp3_stool/merged_mpa.txt" in captured.err
     assert "No results were written" in captured.err
+
+
+def test_mock_cohort_uses_one_manifest_and_does_not_download(capsys):
+    from tssbias.config import load_config
+
+    cfg = load_config()
+    cohort = cfg.cohort("mock")
+    frame = pd.read_csv(cohort.manifest, sep="\t", dtype=str)
+    assert list(frame["sample_id"]) == ["SRR8359173"]
+    assert list(frame["longread_srr"]) == ["SRR11606871"]
+    assert cohort.fastq_dir.name == "mock"
+    assert cfg.cohort("matched").fastq_dir.name == "matched_longread"
+    code = main(["mock"])
+    captured = capsys.readouterr()
+    assert code == 2
+    assert "download data/manifests/mock.tsv" in captured.err
+    assert "does not download FASTQs" in captured.err
+    code = main(["mock", "--hifi"])
+    captured = capsys.readouterr()
+    assert code == 2
+    assert "fastq/mock/longread/SRR11606871" in captured.err
+    code = main(["five-prime", "--cohort", "mock"])
+    captured = capsys.readouterr()
+    assert code == 2
+    assert "mock_merged" in captured.err
+    code = main(["matched-longread", "--sample-index", "0"])
+    captured = capsys.readouterr()
+    assert code == 2
+    assert "fastq/matched_longread/longread/" in captured.err
