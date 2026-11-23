@@ -49,13 +49,13 @@ def run(cfg: Config, args: argparse.Namespace) -> None:
     check("fastq_dir", cohort.fastq_dir)
     if cohort.manifest.exists():
         samples = read_manifest(cohort.manifest)
-        if samples:
-            for path in fastq_paths(cohort.fastq_dir, samples[0].sample_id, cohort.seq_type):
-                check(f"fastq[{samples[0].sample_id}]", path)
-            if cohort.paired_rna and samples[0].rna_id:
-                rna = samples[0].rna_id
-                check("rna_r1", cohort.fastq_dir / f"{rna}_1.fastq.gz")
-                check("rna_r2", cohort.fastq_dir / f"{rna}_2.fastq.gz")
+        for sample in samples:
+            for path in fastq_paths(cohort.fastq_dir, sample.sample_id, cohort.seq_type):
+                check(f"fastq[{sample.sample_id}]", path)
+            if cohort.paired_rna and sample.rna_id:
+                rna = sample.rna_id
+                check(f"rna[{rna}]_r1", cohort.fastq_dir / f"{rna}_1.fastq.gz")
+                check(f"rna[{rna}]_r2", cohort.fastq_dir / f"{rna}_2.fastq.gz")
     for species in cfg.species_in(cohort.species_set):
         check(f"fasta[{species.assembly}]", cfg.fasta_path(species.assembly))
         check(f"tss[{species.assembly}]", cfg.tss_table_path(species.assembly))

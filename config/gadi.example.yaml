@@ -97,15 +97,16 @@ cohorts:
     abundance_table: "{data_root}/mpa4_res/merged_mpa.txt"
     bioproject: ""
     paired_rna: false
-  hyp:
-    manifest: "{repo_root}/data/manifests/hyp.tsv"
-    fastq_dir: "{data_root}/fastq/hyp"
+  # Public replacement for the private HYP list. See README for the run rule.
+  hmp3_stool:
+    manifest: "{repo_root}/data/manifests/hmp3_stool.tsv"
+    fastq_dir: "{data_root}/fastq/hmp3_stool"
     seq_type: illumina
     abundance_min_pct: 0.5
     abundance_min_samples: 5
     species_set: correlation
-    abundance_table: "{data_root}/mpa4_res/merged_mpa.txt"
-    bioproject: ""
+    abundance_table: "{data_root}/mpa4_res/hmp3_stool/merged_mpa.txt"
+    bioproject: PRJNA275349
     paired_rna: false
   pacbio:
     manifest: "{repo_root}/data/manifests/pacbio.tsv"

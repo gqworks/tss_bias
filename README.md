@@ -25,7 +25,7 @@ A missing FASTQ, abundance table, BAM, or reference raises a missing-input error
 * Abundance-normalised TPM: `norm_tpm = 1e6 * kallisto_tpm / mapped_metagenomic_reads`. Groups on `norm_tpm`: zero (`== 0`), low (`< 100`), mid (`< 1000`), high (`>= 1000`).
 * Log expression: `ln(norm_tpm + 0.001)`.
 * Permutation: rotate TSS coordinates on each contig so successive gaps stay the same (modulus = the last TSS). One-sided p = `min(1, (#{null mean > observed} + 1) / n)`. Illumina n = 500, long-read n = 100. Benjamini–Hochberg FDR 0.05 across the tests in the run.
-* Species must be at or above 0.5% relative abundance in enough samples (iHMP 30, Franzosa 5, ARG 10, HYP 5, PacBio/Nanopore 4).
+* Species must be at or above 0.5% relative abundance in enough samples (iHMP 30, Franzosa 5, ARG 10, HMP Phase III stool 5, PacBio/Nanopore 4).
 
 The lab scripts summed an asymmetric 500-vs-501 bp split of the z-scored window. This pipeline uses the manuscript mean of the two 500 bp flanks. Accessions follow the assemblies those scripts actually ran. A methods table in the revision draft swaps *F. prausnitzii* and *P. vulgatus*; `config/species.yaml` does not.
 
@@ -58,7 +58,8 @@ Scores are median semi-global alignments (`align.calign`, DNAFULL) of the unmapp
 | GC-bias permutation | `python -m tssbias permutation --cohort hmp2 --metric gc` |
 | Expression groups and abundance-normalised TPM | `python -m tssbias expression --cohort hmp2` |
 | GC-adjusted linear mixed model | `python -m tssbias gc-lmm --cohort hmp2` |
-| Cohort replication (iHMP, Franzosa, HYP, ARG) | `python -m tssbias cohort-correlation` |
+| Cohort replication (iHMP, Franzosa, HMP Phase III stool, ARG) | `python -m tssbias cohort-correlation` |
+| HMP Phase III stool discovery (public replacement for HYP) | `python -m tssbias discover --cohort hmp3_stool` |
 | Illumina vs PacBio vs Nanopore | `python -m tssbias platform-comparison` |
 | Long-read test restricted to genes > 1 kb | `python -m tssbias permutation --cohort pacbio --min-gene-bp 1000` |
 | ART mappability control | `python -m tssbias mappability --cohort hmp2` |
@@ -74,6 +75,24 @@ Scores are median semi-global alignments (`align.calign`, DNAFULL) of the unmapp
 | Rebuild the abundance table | `python -m tssbias metaphlan --cohort hmp2` |
 
 Franzosa replication uses the 8 RNAlater accessions in `data/manifests/franzosa_rnalater.tsv`. iHMP is the 78 pairs in `data/manifests/hmp2.tsv` (DNA id, RNA id), BioProject PRJNA389280. Array jobs pass `--sample-index` (0-based).
+
+## HMP Phase III stool (replaces HYP)
+
+`hmp3_stool` is the public DNA shotgun cohort in place of the private HYP list. It is the same command slot: `discover`, `permutation`, `metaphlan`, and `cohort-correlation` take `--cohort hmp3_stool` (correlation always includes it). Abundance screen is the HYP bar, 0.5% in at least 5 samples, species set `correlation`. There is no paired RNA.
+
+Source: BioProject PRJNA275349, SRA study SRP056641, ENA read-run table. Healthy US adult HMP Phase III WGS. The manifest is `data/manifests/hmp3_stool.tsv` (20 runs, 20 specimens). `sample_id` is the run accession.
+
+Selection rule, applied in this order:
+
+1. Keep `sample_alias` ending in `G_DNA_Stool` (stool; other body sites in this project are excluded).
+2. Keep paired-end WGS metagenomes on Illumina HiSeq 2000 (`library_layout=PAIRED`, `library_strategy=WGS`, `library_source=METAGENOMIC`). All 96 stool runs match. The project's only single-end run is anterior nares.
+3. Keep one run per alias. Seven aliases are deposited as two runs of the same BioSample. Keep the lexicographically smallest `run_accession`. That leaves 89 specimens. Inside this subset that drops `SRR2175754` (alias `700021123_zg_G_DNA_Stool`, kept `SRR1952455`) and `SRR2240257` (alias `700021261_zg_G_DNA_Stool`, kept `SRR2240255`).
+4. Do not collapse further. The alias is `{specimen}_zg_G_DNA_Stool`. `zg` is the stool-site token on every stool row (other sites use `zs1`, `zo1`, `zv2`, `zo7`, `zo9`). No specimen number is shared across aliases, so a repeat visit of the same donor is not visible. Public BioSample records have no subject id; that link is dbGaP phs000228 and is not used.
+5. Sort the 89 aliases ascending and take the first 20.
+
+Runs: SRR2175645, SRR2175647, SRR2175649, SRR2175654, SRR2175658, SRR2175659, SRR2175670, SRR2175721, SRR2175723, SRR2175724, SRR2175725, SRR2175726, SRR2175727, SRR2175728, SRR2175745, SRR2175749, SRR2175750, SRR1952455, SRR2240255, SRR2175755.
+
+Stage paired FASTQs at `{data_root}/fastq/hmp3_stool/{SRR}_1.fastq.gz` and `{SRR}_2.fastq.gz`. The commands do not download this cohort. If a file is absent, `check-inputs` and `discover` exit 2 and write nothing. Rebuild abundance with `python -m tssbias metaphlan --cohort hmp3_stool` into `{data_root}/mpa4_res/hmp3_stool/merged_mpa.txt`. On Gadi, `TSS_COHORT=hmp3_stool` and a 1–20 array cover the manifest.
 
 ## What runs here, and what needs Gadi
 

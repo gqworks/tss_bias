@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import argparse
 
-from tssbias.commands.common import passing_pairs
+from tssbias.commands.common import abundance_path, passing_pairs, selected_samples
 from tssbias.cohorts import fastq_paths
 from tssbias.config import Config, Species
 from tssbias.coverage import depth_from_bigwig, orient_windows, write_matrix
@@ -34,13 +34,25 @@ def run(cfg: Config, args: argparse.Namespace) -> None:
         any matrix is written for that pair.
     """
     cohort = cfg.cohort(args.cohort)
-    pairs = passing_pairs(cfg, cohort, args)
-    missing_fastq = []
-    missing_ref = []
-    for sample, species in pairs:
+    samples = selected_samples(cfg, cohort, args)
+    staged = []
+    table = abundance_path(cfg, cohort)
+    if not table.exists():
+        staged.append(table)
+    for sample in samples:
         for path in fastq_paths(cohort.fastq_dir, sample.sample_id, cohort.seq_type):
             if not path.exists():
-                missing_fastq.append(path)
+                staged.append(path)
+    if staged:
+        raise MissingInputError(
+            f"cohort {cohort.name} FASTQs must already be staged under {cohort.fastq_dir} "
+            "as {sample_id}_1.fastq.gz and {sample_id}_2.fastq.gz (Illumina) "
+            "or {sample_id}.fastq.gz (long read). This command does not download FASTQs.",
+            staged,
+        )
+    pairs = passing_pairs(cfg, cohort, args)
+    missing_ref = []
+    for sample, species in pairs:
         if not cfg.fasta_path(species.assembly).exists() or not cfg.tss_table_path(species.assembly).exists():
             missing_ref.append(cfg.fasta_path(species.assembly))
             missing_ref.append(cfg.tss_table_path(species.assembly))
@@ -49,11 +61,6 @@ def run(cfg: Config, args: argparse.Namespace) -> None:
             f"reference FASTA or filtered TSS table is missing for cohort {cohort.name}. "
             "Run: python -m tssbias prepare-references --cohort " + cohort.name,
             sorted(set(missing_ref)),
-        )
-    if missing_fastq:
-        raise MissingInputError(
-            f"FASTQs for cohort {cohort.name} are not under {cohort.fastq_dir}",
-            missing_fastq,
         )
     _require_aligner(cohort.seq_type)
     for sample, species in pairs:
