@@ -1,12 +1,7 @@
 """Sample manifests, species pins, and MetaPhlAn abundance filters.
 
-Relative abundance is a percent. MetaPhlAn species profiles are used as
-published (already percentages). Long-read tables shipped under ``src/`` are
-clade count tables; species rows are converted to a percentage of the
-species-level column sum before the 0.5% rule is applied.
-
-Species tables are MetaPhlAn 4 output written by
-``python -m tssbias metaphlan <manifest>`` to
+Relative abundance is a percent. Species tables are MetaPhlAn 4 output
+written by ``python -m tssbias metaphlan <manifest>`` to
 ``{data_root}/mpa4_res/<cohort>/merged_mpa.txt``. This loader reads that
 file. A count table whose column sum exceeds 100 is converted to a
 percentage of the species-level column sum before the 0.5% rule.

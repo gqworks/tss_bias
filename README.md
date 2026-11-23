@@ -2,7 +2,7 @@
 
 Re-executable analyses for "Metagenomic coverage bias at transcription start sites is correlated with gene expression".
 
-The runnable path is `python -m tssbias`. The Python files at the repository root are the original lab scripts and are not the rerun interface. Configuration, seeds, and thresholds live in `config/default.yaml` and `config/species.yaml`. Copy `config/gadi.example.yaml` to `config/gadi.local.yaml` on NCI Gadi and point `TSS_CONFIG` at it. `TSS_PROJECT`, `TSS_DATA_ROOT`, `TSS_SCRATCH_ROOT`, `TSS_RESULTS_DIR`, and `TSS_SEED` override the file.
+The runnable path is `python -m tssbias`. Configuration, seeds, and thresholds live in `config/default.yaml` and `config/species.yaml`. Copy `config/gadi.example.yaml` to `config/gadi.local.yaml` on NCI Gadi and point `TSS_CONFIG` at it. `TSS_PROJECT`, `TSS_DATA_ROOT`, `TSS_SCRATCH_ROOT`, `TSS_RESULTS_DIR`, and `TSS_SEED` override the file.
 
 ```bash
 python -m tssbias check-inputs --cohort hmp2
@@ -161,7 +161,7 @@ python -m tssbias download data/manifests/matched_longread.tsv
 python -m tssbias matched-longread
 ```
 
-Illumina FASTQs land in `{data_root}/fastq/mock/`. The HiFi file lands in `{data_root}/fastq/mock/longread/`. Gut pairs land in `{data_root}/fastq/matched_longread/` and `{data_root}/fastq/matched_longread/longread/`. `mock` is the exact-strain no-bias control on the 20 concatenated ATCC genomes. `five-prime --cohort mock` is the 5′ check on that one sample. `mock --hifi` maps those Illumina reads to a 100,000-read subset of `SRR11606871` and contrasts that bias with the exact-strain result. The subset is written to `{scratch_root}/mock/hifi/SRR11606871_100k.fa` before Prodigal, Bowtie2, or minimap2. `matched-longread` stays the gut same-sample test. The old `mock_community_analysis/` scripts are not the rerun path.
+Illumina FASTQs land in `{data_root}/fastq/mock/`. The HiFi file lands in `{data_root}/fastq/mock/longread/`. Gut pairs land in `{data_root}/fastq/matched_longread/` and `{data_root}/fastq/matched_longread/longread/`. `mock` is the exact-strain no-bias control on the 20 concatenated ATCC genomes. `five-prime --cohort mock` is the 5′ check on that one sample. `mock --hifi` maps those Illumina reads to a 100,000-read subset of `SRR11606871` and contrasts that bias with the exact-strain result. The subset is written to `{scratch_root}/mock/hifi/SRR11606871_100k.fa` before Prodigal, Bowtie2, or minimap2. `matched-longread` stays the gut same-sample test.
 
 ## What runs here, and what needs Gadi
 
