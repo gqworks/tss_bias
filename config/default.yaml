@@ -1,0 +1,155 @@
+# Local / default paths. Override on Gadi with config/gadi.example.yaml
+# copied to config/gadi.local.yaml, or with TSS_DATA_ROOT, TSS_SCRATCH_ROOT,
+# TSS_RESULTS_DIR, TSS_PROJECT, TSS_SEED, TSS_CONFIG.
+
+gadi:
+  project: ""
+  queue: normal
+  walltime: "24:00:00"
+  ncpus: 16
+  mem: "64GB"
+
+paths:
+  data_root: "{repo_root}/staged_data"
+  scratch_root: "{repo_root}/scratch"
+  results_dir: "{repo_root}/results"
+  refseq_dir: "{data_root}/refseq_genomes"
+  bams_dir: "{scratch_root}/bams"
+  bigwig_dir: "{scratch_root}/bigwig"
+  matrices_dir: "{results_dir}/matrices"
+  mpa_merged: "{data_root}/mpa4_res/hmp2/merged_mpa.txt"
+  kallisto_dir: "{results_dir}/kallisto"
+  assembled_dir: "{scratch_root}/assembled_ref"
+  promotech_dir: "{results_dir}/promotech"
+  sketches_dir: "{scratch_root}/sketches"
+  pacbio_abundance: "{data_root}/mpa4_res/pacbio/merged_mpa.txt"
+  nanopore_abundance: "{data_root}/mpa4_res/nanopore/merged_mpa.txt"
+
+compute:
+  threads: 8
+
+analysis:
+  seed: 1
+  window_bp: 500
+  n_permutations: 500
+  longread_permutations: 100
+  fdr_alpha: 0.05
+  tpm_low: 100
+  tpm_mid: 1000
+  tpm_pseudocount: 0.001
+  # Bowtie2 --mp values. 6 is the Bowtie2 default maximum mismatch penalty.
+  bowtie2_mp: [8, 6, 4, 2]
+  read_length: 150
+  # Manuscript: 50 bp window starting 10 bp upstream of the TSS.
+  five_prime_window: 50
+  five_prime_upstream_shift: 10
+  five_prime_offsets: [0, 100, 200, 300, 400]
+  min_gene_bp_five_prime: 500
+  # Suppl. Fig. 8 read windows use this buffer so a read is wholly on one side.
+  flank_buffer_bp: 5
+  longread_min_read_bp: 10000
+  longread_subsample: 100000
+  longread_min_gene_bp: 1000
+  mapq_min: 40
+  mag_min_fraction: 80
+  mag_hq_completeness: 90
+  mag_hq_contamination: 5
+  promotech_bp: 100
+  promotech_score_threshold: 0.7
+  # art_illumina, as written in the methods.
+  art_args: ["-na", "-ss", "HS25", "-p", "-l", "150", "-c", "500000", "-m200", "-s", "10"]
+  correlation_min_pct: 0.5
+  correlation_min_samples: 5
+  correlation_balance_n: 20
+
+software:
+  kraken_db: ""
+  metaphlan_db: ""
+  promotech_home: ""
+
+figshare:
+  project_url: "https://figshare.com/projects/Metagenomic_coverage_bias_at_transcription_start_sites_is_correlated_with_gene_expression/242600"
+
+cohorts:
+  hmp2:
+    manifest: "{repo_root}/data/manifests/hmp2.tsv"
+    fastq_dir: "{data_root}/fastq/hmp2"
+    seq_type: illumina
+    abundance_min_pct: 0.5
+    abundance_min_samples: 30
+    abundance_table: "{data_root}/mpa4_res/hmp2/merged_mpa.txt"
+    bioproject: PRJNA389280
+    paired_rna: true
+  franzosa:
+    manifest: "{repo_root}/data/manifests/franzosa_rnalater.tsv"
+    fastq_dir: "{data_root}/fastq/franzosa"
+    seq_type: illumina
+    abundance_min_pct: 0.5
+    abundance_min_samples: 5
+    abundance_table: "{data_root}/mpa4_res/franzosa/merged_mpa.txt"
+    bioproject: PRJNA188481
+    paired_rna: false
+  # Liu et al. 2016. Display name is exactly "Liu et al." All 110 public runs.
+  liu2016:
+    display_name: "Liu et al."
+    manifest: "{repo_root}/data/manifests/liu2016.tsv"
+    fastq_dir: "{data_root}/fastq/liu2016"
+    seq_type: illumina
+    abundance_min_pct: 0.5
+    abundance_min_samples: 30
+    abundance_table: "{data_root}/mpa4_res/liu2016/merged_mpa.txt"
+    bioproject: PRJNA328899
+    paired_rna: false
+  # Public replacement for the private HYP list. All stool specimens that
+  # survive the one-run-per-alias rule. FASTQs are not downloaded.
+  hmp3_stool:
+    manifest: "{repo_root}/data/manifests/hmp3_stool.tsv"
+    fastq_dir: "{data_root}/fastq/hmp3_stool"
+    seq_type: illumina
+    abundance_min_pct: 0.5
+    abundance_min_samples: 30
+    abundance_table: "{data_root}/mpa4_res/hmp3_stool/merged_mpa.txt"
+    bioproject: PRJNA275349
+    paired_rna: false
+  pacbio:
+    manifest: "{repo_root}/data/manifests/pacbio.tsv"
+    fastq_dir: "{data_root}/fastq/pacbio"
+    seq_type: pacbio
+    abundance_min_pct: 0.5
+    abundance_min_samples: 4
+    abundance_table: "{data_root}/mpa4_res/pacbio/merged_mpa.txt"
+    bioproject: PRJNA754443
+    paired_rna: false
+  nanopore:
+    manifest: "{repo_root}/data/manifests/nanopore.tsv"
+    fastq_dir: "{data_root}/fastq/nanopore"
+    seq_type: nanopore
+    abundance_min_pct: 0.5
+    abundance_min_samples: 4
+    abundance_table: "{data_root}/mpa4_res/nanopore/merged_mpa.txt"
+    bioproject: PRJNA820119
+    paired_rna: false
+  # ATCC MSA-1003. One Illumina run. HiFi accession is longread_srr.
+  mock:
+    display_name: "ATCC MSA-1003"
+    manifest: "{repo_root}/data/manifests/mock.tsv"
+    fastq_dir: "{data_root}/fastq/mock"
+    seq_type: illumina
+    abundance_min_pct: 0.5
+    abundance_min_samples: 1
+    abundance_table: "{data_root}/mpa4_res/mock/merged_mpa.txt"
+    bioproject: PRJNA510527
+    paired_rna: false
+  # Same donors as nanopore. sample_id in that file is the ONT run;
+  # shortread_srr is the matched Illumina run.
+  matched:
+    manifest: "{repo_root}/data/manifests/nanopore.tsv"
+    fastq_dir: "{data_root}/fastq/nanopore/shortread"
+    seq_type: illumina
+    abundance_min_pct: 0.5
+    abundance_min_samples: 5
+    abundance_table: "{data_root}/mpa4_res/matched/merged_mpa.txt"
+    bioproject: PRJNA820119
+    paired_rna: false
+    sample_column: shortread_srr
+    longread_column: sample_id

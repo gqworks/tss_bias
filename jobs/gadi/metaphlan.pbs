@@ -1,0 +1,24 @@
+#!/bin/bash
+#PBS -N tss_mpa
+#PBS -q normal
+#PBS -l ncpus=16,mem=64GB,walltime=12:00:00
+#PBS -j oe
+set -euo pipefail
+cd "${PBS_O_WORKDIR}"
+export TSS_CONFIG="${TSS_CONFIG:-${PBS_O_WORKDIR}/config/gadi.local.yaml}"
+cohort="${TSS_COHORT:-hmp2}"
+extra=()
+case "${cohort}" in
+  franzosa) default_manifest="data/manifests/franzosa_rnalater.tsv" ;;
+  matched)
+    default_manifest="data/manifests/nanopore.tsv"
+    extra=(--cohort matched)
+    ;;
+  *) default_manifest="data/manifests/${cohort}.tsv" ;;
+esac
+manifest="${TSS_MANIFEST:-${PBS_O_WORKDIR}/${default_manifest}}"
+if [[ -n "${PBS_ARRAY_INDEX:-}" ]]; then
+  python -m tssbias metaphlan "${manifest}" "${extra[@]}" --sample-index "$((PBS_ARRAY_INDEX - 1))"
+else
+  python -m tssbias metaphlan "${manifest}" "${extra[@]}"
+fi
