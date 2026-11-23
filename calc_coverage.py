@@ -197,9 +197,12 @@ for sample in hmp2_mpa.columns:
 
 
 ### Alternate Illumina datasets ###
-with open('sample_lists/arg_samples') as f:
-    arg_samples = f.read().splitlines()
-arg_samples = {x.split('\t')[0]:x.split('\t')[1] for x in arg_samples}
+# Liu et al. 2016. FASTQs are {TSS_DATA_ROOT}/fastq/liu2016/{SRR}_1.fastq.gz.
+liu2016_fastq_dir = os.path.join(os.environ.get('TSS_DATA_ROOT', 'staged_data'), 'fastq', 'liu2016')
+liu2016_samples = {
+    sample_id: liu2016_fastq_dir
+    for sample_id in pd.read_csv('data/manifests/liu2016.tsv', sep='\t')['sample_id']
+}
 
 # Public HMP Phase III stool runs. FASTQs are {TSS_DATA_ROOT}/fastq/hmp3_stool/{SRR}_1.fastq.gz.
 hmp3_stool_fastq_dir = os.path.join(os.environ.get('TSS_DATA_ROOT', 'staged_data'), 'fastq', 'hmp3_stool')
@@ -208,11 +211,11 @@ hmp3_stool_samples = {
     for sample_id in pd.read_csv('data/manifests/hmp3_stool.tsv', sep='\t')['sample_id']
 }
 
-merged_samples = {**franzosa_samples, **hmp2_samples, **arg_samples, **hmp3_stool_samples}
+merged_samples = {**franzosa_samples, **hmp2_samples, **liu2016_samples, **hmp3_stool_samples}
 alt_illumina_mpa = mpa_res.loc[:,merged_samples.keys()]
 alt_illumina_mpa = alt_illumina_mpa.loc[((alt_illumina_mpa[franzosa_samples.keys()] > 0.5).sum(axis=1) >= 5) & 
                                ((alt_illumina_mpa[hmp2_samples.keys()] > 0.5).sum(axis=1) >= 30) &
-                               ((alt_illumina_mpa[arg_samples.keys()] > 0.5).sum(axis=1) >= 5) & 
+                               ((alt_illumina_mpa[liu2016_samples.keys()] > 0.5).sum(axis=1) >= 5) & 
                                ((alt_illumina_mpa[hmp3_stool_samples.keys()] > 0.5).sum(axis=1) >= 5),:]
 alt_illumina_mpa = alt_illumina_mpa.where(alt_illumina_mpa > 0.5, np.nan)
 
@@ -304,8 +307,8 @@ for sample in merged_abund.columns:
             calc_cov(asm,sample,DNA_loc,seq_type)
 
 '''
-### ARG Dataset Strain Diversity read alignment analysis ###
-arg_mpa = mpa_res.loc[:,arg_samples]
+### Liu et al. 2016 strain-diversity alignment ###
+arg_mpa = mpa_res.loc[:,liu2016_samples]
 arg_mpa = arg_mpa.loc[((arg_mpa > 0.5).sum(axis=1) >= 10),:] # Filter species with atleast 0.5% abundance in atleast 10 samples
 arg_mpa = arg_mpa.where(arg_mpa > 0.5, np.nan)
 
@@ -328,7 +331,7 @@ selected_genomes = {'s__Phocaeicola_vulgatus': ['https://ftp.ncbi.nlm.nih.gov/ge
 
 seq_type = 'illumina'
 for sample in arg_mpa.columns:
-    DNA_loc = arg_samples[sample]
+    DNA_loc = liu2016_samples[sample]
     for species in arg_mpa.index:
         if np.isnan(arg_mpa.loc[species,sample]):
             continue

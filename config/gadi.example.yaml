@@ -87,17 +87,18 @@ cohorts:
     abundance_table: "{data_root}/mpa4_res/merged_mpa.txt"
     bioproject: ""
     paired_rna: false
-  arg:
-    manifest: "{repo_root}/data/manifests/arg.tsv"
-    fastq_dir: "{data_root}/fastq/arg"
+  liu2016:
+    display_name: "Liu et al."
+    manifest: "{repo_root}/data/manifests/liu2016.tsv"
+    fastq_dir: "{data_root}/fastq/liu2016"
     seq_type: illumina
     abundance_min_pct: 0.5
     abundance_min_samples: 10
-    species_set: arg
-    abundance_table: "{data_root}/mpa4_res/merged_mpa.txt"
-    bioproject: ""
+    species_set: liu2016
+    abundance_table: "{data_root}/mpa4_res/liu2016/merged_mpa.txt"
+    bioproject: PRJNA328899
     paired_rna: false
-  # Public replacement for the private HYP list. See README for the run rule.
+  # Public HMP Phase III stool. See README for the one-run-per-specimen rule.
   hmp3_stool:
     manifest: "{repo_root}/data/manifests/hmp3_stool.tsv"
     fastq_dir: "{data_root}/fastq/hmp3_stool"

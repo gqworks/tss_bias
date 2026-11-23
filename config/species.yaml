@@ -10,12 +10,12 @@ species:
     assembly: GCF_000012825.1_ASM1282v1
     ftp: https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/012/825/GCF_000012825.1_ASM1282v1
     taxid: 821
-    sets: [hmp2, franzosa, correlation, longread, arg, matched]
+    sets: [hmp2, franzosa, correlation, longread, liu2016, matched]
   s__Agathobacter_rectalis:
     assembly: GCF_022453685.1_ASM2245368v1
     ftp: https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/022/453/685/GCF_022453685.1_ASM2245368v1
     taxid: 39491
-    sets: [hmp2, franzosa, correlation, longread, arg]
+    sets: [hmp2, franzosa, correlation, longread, liu2016]
   s__Alistipes_putredinis:
     assembly: GCF_000154465.1_ASM15446v1
     ftp: https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/154/465/GCF_000154465.1_ASM15446v1
@@ -25,17 +25,17 @@ species:
     assembly: GCF_000154385.1_ASM15438v1
     ftp: https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/154/385/GCF_000154385.1_ASM15438v1
     taxid: 853
-    sets: [hmp2, franzosa, correlation, longread, arg, matched]
+    sets: [hmp2, franzosa, correlation, longread, liu2016, matched]
   s__Bacteroides_uniformis:
     assembly: GCF_044361425.1_ASM4436142v1
     ftp: https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/044/361/425/GCF_044361425.1_ASM4436142v1
     taxid: 820
-    sets: [hmp2, franzosa, correlation, longread, arg, matched]
+    sets: [hmp2, franzosa, correlation, longread, liu2016, matched]
   s__Parabacteroides_distasonis:
     assembly: GCF_018279895.1_ASM1827989v1
     ftp: https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/018/279/895/GCF_018279895.1_ASM1827989v1
     taxid: 823
-    sets: [hmp2, franzosa, arg]
+    sets: [hmp2, franzosa, liu2016]
   s__Bacteroides_caccae:
     assembly: GCF_018292205.1_ASM1829220v1
     ftp: https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/018/292/205/GCF_018292205.1_ASM1829220v1
@@ -56,11 +56,11 @@ species:
   s__Ruminococcus_bromii:
     assembly: GCF_014863965.1_ASM1486396v1
     ftp: https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/014/863/965/GCF_014863965.1_ASM1486396v1
-    sets: [arg]
+    sets: [liu2016]
   s__Roseburia_faecis:
     assembly: GCF_015550045.1_ASM1555004v1
     ftp: https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/015/550/045/GCF_015550045.1_ASM1555004v1
-    sets: [arg, matched]
+    sets: [liu2016, matched]
   s__Anaerobutyricum_hallii:
     assembly: GCF_018140635.1_ASM1814063v1
     ftp: https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/018/140/635/GCF_018140635.1_ASM1814063v1

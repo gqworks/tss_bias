@@ -89,30 +89,6 @@ def test_discover_fails_clearly_without_gadi_inputs(capsys):
     assert "No results were written" in captured.err
 
 
-HMP3_STOOL_RUNS = [
-    "SRR2175645",
-    "SRR2175647",
-    "SRR2175649",
-    "SRR2175654",
-    "SRR2175658",
-    "SRR2175659",
-    "SRR2175670",
-    "SRR2175721",
-    "SRR2175723",
-    "SRR2175724",
-    "SRR2175725",
-    "SRR2175726",
-    "SRR2175727",
-    "SRR2175728",
-    "SRR2175745",
-    "SRR2175749",
-    "SRR2175750",
-    "SRR1952455",
-    "SRR2240255",
-    "SRR2175755",
-]
-
-
 def test_hmp3_stool_replaces_private_hyp():
     from tssbias.cohorts import read_manifest
     from tssbias.config import load_config
@@ -126,15 +102,61 @@ def test_hmp3_stool_replaces_private_hyp():
     assert cohort.species_set == "correlation"
     assert cohort.paired_rna is False
     frame = pd.read_csv(cohort.manifest, sep="\t", dtype=str)
-    assert frame["sample_id"].tolist() == HMP3_STOOL_RUNS
+    assert len(frame) == 89
+    assert frame["sample_alias"].tolist() == sorted(frame["sample_alias"])
     assert frame["sample_alias"].str.endswith("G_DNA_Stool").all()
     assert frame["sample_id"].is_unique
     assert frame["sample_alias"].is_unique
+    assert frame["biosample"].is_unique
     assert set(frame["bioproject"]) == {"PRJNA275349"}
     assert set(frame["sra_study"]) == {"SRP056641"}
     assert set(frame["library_layout"]) == {"PAIRED"}
+    # Duplicate deposit of 700021123_zg_G_DNA_Stool; the smaller SRR is kept.
+    assert "SRR2175754" not in set(frame["sample_id"])
+    assert "SRR1952455" in set(frame["sample_id"])
     samples = read_manifest(cohort.manifest)
-    assert [sample.sample_id for sample in samples] == HMP3_STOOL_RUNS
+    assert [sample.sample_id for sample in samples] == frame["sample_id"].tolist()
+    assert samples[0].sample_id == "SRR2175645"
+
+
+def test_liu2016_replaces_private_arg():
+    from tssbias.cohorts import read_manifest
+    from tssbias.config import load_config
+
+    cfg = load_config()
+    assert "arg" not in cfg.cohorts
+    cohort = cfg.cohort("liu2016")
+    assert cohort.display_name == "Liu et al."
+    assert cohort.bioproject == "PRJNA328899"
+    assert cohort.abundance_min_pct == 0.5
+    assert cohort.abundance_min_samples == 10
+    assert cohort.species_set == "liu2016"
+    assert cohort.paired_rna is False
+    assert cohort.fastq_dir.name == "liu2016"
+    frame = pd.read_csv(cohort.manifest, sep="\t", dtype=str)
+    assert len(frame) == 110
+    assert frame["sample_alias"].tolist() == sorted(frame["sample_alias"])
+    assert frame["sample_id"].is_unique
+    assert frame["sample_alias"].is_unique
+    assert frame["biosample"].is_unique
+    assert set(frame["bioproject"]) == {"PRJNA328899"}
+    assert set(frame["sra_study"]) == {"SRP080787"}
+    assert set(frame["library_layout"]) == {"PAIRED"}
+    assert set(frame["library_strategy"]) == {"WGS"}
+    samples = read_manifest(cohort.manifest)
+    assert [sample.sample_id for sample in samples] == frame["sample_id"].tolist()
+    assert samples[0].sample_id == "SRR3992955"
+
+
+def test_liu2016_discover_fails_when_fastqs_are_absent(capsys):
+    code = main(["discover", "--cohort", "liu2016", "--sample-index", "0"])
+    captured = capsys.readouterr()
+    assert code == 2
+    assert "does not download FASTQs" in captured.err
+    assert "fastq/liu2016/SRR3992955_1.fastq.gz" in captured.err
+    assert "fastq/liu2016/SRR3992955_2.fastq.gz" in captured.err
+    assert "liu2016/merged_mpa.txt" in captured.err
+    assert "No results were written" in captured.err
 
 
 def test_hmp3_stool_discover_fails_when_fastqs_are_absent(capsys):

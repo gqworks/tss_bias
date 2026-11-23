@@ -2,8 +2,9 @@
 
 Cohort replication uses species that pass 0.5% abundance in at least 5 samples
 of every cohort, and only the first 20 iHMP samples so the cohorts are closer
-in size. The fourth Illumina cohort is ``hmp3_stool`` (public HMP Phase III
-stool, 20 runs), in the slot previously held by the private HYP list.
+in size. The other Illumina cohorts are ``liu2016`` (Liu et al., all 110
+public runs) and ``hmp3_stool`` (every HMP Phase III stool specimen that
+survives the one-run-per-alias rule).
 Platform comparison uses the long-read species set, with the iHMP
 threshold at 30 samples and long-read thresholds at 4.
 """
@@ -36,7 +37,7 @@ def run_cohorts(cfg: Config, args: argparse.Namespace) -> None:
         ``results/correlation/cohort_summary.csv``
     """
     del args
-    names = ["hmp2", "franzosa", "arg", "hmp3_stool"]
+    names = ["hmp2", "franzosa", "liu2016", "hmp3_stool"]
     _correlate(cfg, names, cfg.species_in("correlation"), balance={"hmp2": cfg.correlation_balance_n}, stem="cohort")
 
 

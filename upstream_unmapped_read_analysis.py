@@ -139,9 +139,8 @@ def calc_bias(x):
     return(right_sum-left_sum)
 
 
-with open('sample_lists/arg_samples') as f:
-    samples = f.read().splitlines()
-samples = [x.split('\t',1)[0] for x in samples]
+# Liu et al. 2016. sample_id values are SRA run accessions.
+samples = pd.read_csv('data/manifests/liu2016.tsv', sep='\t')['sample_id'].tolist()
 
 mpa_res = pd.read_table('mpa4_res/merged_mpa.txt', comment= '#')
 mpa_res = mpa_res[(mpa_res['clade_name'].str.contains("s__"))&(~mpa_res['clade_name'].str.contains("t__"))]

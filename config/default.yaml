@@ -91,19 +91,20 @@ cohorts:
     abundance_table: "{data_root}/mpa4_res/merged_mpa.txt"
     bioproject: ""
     paired_rna: false
-  arg:
-    manifest: "{repo_root}/data/manifests/arg.tsv"
-    fastq_dir: "{data_root}/fastq/arg"
+  # Liu et al. 2016. Display name is exactly "Liu et al." All 110 public runs.
+  liu2016:
+    display_name: "Liu et al."
+    manifest: "{repo_root}/data/manifests/liu2016.tsv"
+    fastq_dir: "{data_root}/fastq/liu2016"
     seq_type: illumina
     abundance_min_pct: 0.5
     abundance_min_samples: 10
-    species_set: arg
-    abundance_table: "{data_root}/mpa4_res/merged_mpa.txt"
-    bioproject: ""
+    species_set: liu2016
+    abundance_table: "{data_root}/mpa4_res/liu2016/merged_mpa.txt"
+    bioproject: PRJNA328899
     paired_rna: false
-  # Public replacement for the private HYP list. Selection rule is in the README.
-  # 20 paired WGS stool runs from PRJNA275349 / SRP056641. FASTQs are not
-  # downloaded by the pipeline; stage them under fastq_dir.
+  # Public replacement for the private HYP list. All stool specimens that
+  # survive the one-run-per-alias rule. FASTQs are not downloaded.
   hmp3_stool:
     manifest: "{repo_root}/data/manifests/hmp3_stool.tsv"
     fastq_dir: "{data_root}/fastq/hmp3_stool"

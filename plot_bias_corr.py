@@ -11,14 +11,14 @@ import pyBigWig
 def get_cor_mat(asm):
     hmp2_samples_bias = np.array([get_bias_from_mat(asm,samp) for samp in hmp2_samples])
     Franzosa_samples_bias = np.array([get_bias_from_mat(asm,samp) for samp in Franzosa_samples])
-    arg_samples_bias = np.array([get_bias_from_mat(asm,samp) for samp in arg_samples])
+    liu2016_bias = np.array([get_bias_from_mat(asm,samp) for samp in liu2016_samples])
     hmp3_stool_bias = np.array([get_bias_from_mat(asm,samp) for samp in hmp3_stool_samples])
     
     hmp2_samples_bias = hmp2_samples_bias[[False if len(x)==1 else True for x in hmp2_samples_bias]]
     Franzosa_samples_bias = Franzosa_samples_bias[[False if len(x)==1 else True for x in Franzosa_samples_bias]]
-    arg_samples_bias = arg_samples_bias[[False if len(x)==1 else True for x in arg_samples_bias]]
+    liu2016_bias = liu2016_bias[[False if len(x)==1 else True for x in liu2016_bias]]
     hmp3_stool_bias = hmp3_stool_bias[[False if len(x)==1 else True for x in hmp3_stool_bias]]
-    all_bias_groups = [hmp2_samples_bias,Franzosa_samples_bias,arg_samples_bias,hmp3_stool_bias]
+    all_bias_groups = [hmp2_samples_bias,Franzosa_samples_bias,liu2016_bias,hmp3_stool_bias]
     cor_vals = []
     p_vals = []
     for x in all_bias_groups:
@@ -95,14 +95,14 @@ def get_null_mat(asm):
     tss_dat = pd.read_csv(f'refseq_genomes/{asm}/{asm}_filtered_tss.csv')
     hmp2_samples_bias = np.array([get_null_bias_from_mat(asm,samp,tss_dat) for samp in hmp2_samples])
     Franzosa_samples_bias = np.array([get_null_bias_from_mat(asm,samp,tss_dat) for samp in Franzosa_samples])
-    arg_samples_bias = np.array([get_null_bias_from_mat(asm,samp,tss_dat) for samp in arg_samples])
+    liu2016_bias = np.array([get_null_bias_from_mat(asm,samp,tss_dat) for samp in liu2016_samples])
     hmp3_stool_bias = np.array([get_null_bias_from_mat(asm,samp,tss_dat) for samp in hmp3_stool_samples])
     
     hmp2_samples_bias = hmp2_samples_bias[[False if len(x)==1 else True for x in hmp2_samples_bias]]
     Franzosa_samples_bias = Franzosa_samples_bias[[False if len(x)==1 else True for x in Franzosa_samples_bias]]
-    arg_samples_bias = arg_samples_bias[[False if len(x)==1 else True for x in arg_samples_bias]]
+    liu2016_bias = liu2016_bias[[False if len(x)==1 else True for x in liu2016_bias]]
     hmp3_stool_bias = hmp3_stool_bias[[False if len(x)==1 else True for x in hmp3_stool_bias]]
-    null_bias_groups = [hmp2_samples_bias,Franzosa_samples_bias,arg_samples_bias,hmp3_stool_bias]
+    null_bias_groups = [hmp2_samples_bias,Franzosa_samples_bias,liu2016_bias,hmp3_stool_bias]
     cor_vals = []
     p_vals = []
     for x in null_bias_groups:
@@ -126,11 +126,10 @@ with open('sample_lists/Franzosa_8_samples') as f:
 #Franzosa_samples = [x.rsplit('\t',1)[0] for x in Franzosa_samples]
 Franzosa_samples = [x.rsplit('/',1)[1] for x in Franzosa_samples]
 
-with open('sample_lists/arg_samples') as f:
-    arg_samples = f.read().splitlines()
-arg_samples = [x.rsplit('\t',1)[0] for x in arg_samples]
+# Liu et al. 2016. sample_id values are SRA run accessions.
+liu2016_samples = pd.read_csv('data/manifests/liu2016.tsv', sep='\t')['sample_id'].tolist()
 
-# Public HMP Phase III stool subset. sample_id values are SRA run accessions.
+# Public HMP Phase III stool specimens. sample_id values are SRA run accessions.
 hmp3_stool_samples = pd.read_csv('data/manifests/hmp3_stool.tsv', sep='\t')['sample_id'].tolist()
 
 #Read species abundances
@@ -141,7 +140,7 @@ mpa_res = mpa_res.drop(columns=['clade_name','NCBI_tax_id'])
 # Filter species with atleast 0.5% abundance in atleast 5 samples in each dataset
 mpa_res = mpa_res.loc[((mpa_res[Franzosa_samples] > 0.5).sum(axis=1) >= 5) & 
                       ((mpa_res[hmp2_samples] > 0.5).sum(axis=1) >= 30) &
-                      ((mpa_res[arg_samples] > 0.5).sum(axis=1) >= 5) & 
+                      ((mpa_res[liu2016_samples] > 0.5).sum(axis=1) >= 5) & 
                       ((mpa_res[hmp3_stool_samples] > 0.5).sum(axis=1) >= 5),:]
 mpa_res = mpa_res.where(mpa_res > 0.5, np.nan)
 
@@ -154,7 +153,7 @@ all_genomes = {'s__Phocaeicola_vulgatus': 'GCF_000012825.1_ASM1282v1',
 
 all_spe_mat = np.zeros((4, 4))
 all_p_mat = np.zeros((4, 4))
-axis_labels = ['HMP2','Franzosa','ARG','HMP3']
+axis_labels = ['HMP2','Franzosa','Liu et al.','HMP3']
 diag = []
 triangle = []
 for species in  all_genomes.keys():
@@ -190,7 +189,7 @@ stats.ttest_ind(diag, triangle) # Ttest_indResult(statistic=2.6765768715298925, 
 ### Get Null ###
 all_spe_mat = np.zeros((4, 4))
 all_p_mat = np.zeros((4, 4))
-axis_labels = ['HMP2','Franzosa','ARG','HMP3']
+axis_labels = ['HMP2','Franzosa','Liu et al.','HMP3']
 for species in  all_genomes.keys():
     asm = all_genomes[species]
     cor_mat, p_mat = get_null_mat(asm)

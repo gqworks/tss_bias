@@ -49,6 +49,7 @@ class Cohort:
     abundance_table: Path | None
     bioproject: str
     paired_rna: bool
+    display_name: str
 
 
 @dataclass(frozen=True)
@@ -268,6 +269,7 @@ def _build(path: Path, repo_root: Path, raw: dict[str, Any], species: dict[str, 
             abundance_table=Path(table) if table else None,
             bioproject=str(item.get("bioproject", "")),
             paired_rna=bool(item.get("paired_rna", False)),
+            display_name=str(item.get("display_name") or name),
         )
     return Config(
         config_path=path,
