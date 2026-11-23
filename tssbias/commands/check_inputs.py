@@ -8,6 +8,7 @@ import shutil
 from tssbias.cohorts import fastq_paths, read_manifest
 from tssbias.commands.common import abundance_path
 from tssbias.config import Config
+from tssbias.refseq import resolved_table
 from tssbias.logutil import get_logger
 
 LOG = get_logger("tssbias.check-inputs")
@@ -60,9 +61,8 @@ def run(cfg: Config, args: argparse.Namespace) -> None:
                 rna = sample.rna_id
                 check(f"rna[{rna}]_r1", cohort.fastq_dir / f"{rna}_1.fastq.gz")
                 check(f"rna[{rna}]_r2", cohort.fastq_dir / f"{rna}_2.fastq.gz")
-    for species in cfg.species_in(cohort.species_set):
-        check(f"fasta[{species.assembly}]", cfg.fasta_path(species.assembly))
-        check(f"tss[{species.assembly}]", cfg.tss_table_path(species.assembly))
+    if cohort.name != "mock":
+        check("refseq_accessions", resolved_table(cfg.refseq_dir))
     toolset = "longread" if cohort.seq_type != "illumina" else "discover"
     for tool in TOOLS[toolset]:
         found = shutil.which(tool)

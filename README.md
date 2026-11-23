@@ -2,7 +2,7 @@
 
 Re-executable analyses for "Metagenomic coverage bias at transcription start sites is correlated with gene expression".
 
-The runnable path is `python -m tssbias`. Configuration, seeds, and thresholds live in `config/default.yaml` and `config/species.yaml`. Copy `config/gadi.example.yaml` to `config/gadi.local.yaml` on NCI Gadi and point `TSS_CONFIG` at it. `TSS_PROJECT`, `TSS_DATA_ROOT`, `TSS_SCRATCH_ROOT`, `TSS_RESULTS_DIR`, and `TSS_SEED` override the file.
+The runnable path is `python -m tssbias`. Configuration, seeds, and thresholds live in `config/default.yaml`. Copy `config/gadi.example.yaml` to `config/gadi.local.yaml` on NCI Gadi and point `TSS_CONFIG` at it. `TSS_PROJECT`, `TSS_DATA_ROOT`, `TSS_SCRATCH_ROOT`, `TSS_RESULTS_DIR`, and `TSS_SEED` override the file.
 
 ```bash
 python -m tssbias check-inputs --cohort hmp2
@@ -27,9 +27,9 @@ A missing FASTQ, abundance table, BAM, or reference raises a missing-input error
 * Permutation: rotate TSS coordinates on each contig so successive gaps stay the same (modulus = the last TSS). One-sided p = `min(1, (#{null mean > observed} + 1) / n)`. Illumina n = 500, long-read n = 100. Benjamini–Hochberg FDR 0.05 across the tests in the run.
 * Species must be at or above 0.5% relative abundance in enough samples (iHMP 30, Franzosa 5, Liu et al. 30, HMP Phase III stool 30, PacBio/Nanopore 4, matched Illumina 5).
 
-The lab scripts summed an asymmetric 500-vs-501 bp split of the z-scored window. This pipeline uses the manuscript mean of the two 500 bp flanks. Accessions follow the assemblies those scripts actually ran. A methods table in the revision draft swaps *F. prausnitzii* and *P. vulgatus*; `config/species.yaml` does not.
+The lab scripts summed an asymmetric 500-vs-501 bp split of the z-scored window. This pipeline uses the manuscript mean of the two 500 bp flanks.
 
-Species abundance is a MetaPhlAn 4 table at `{data_root}/mpa4_res/<cohort>/merged_mpa.txt`, written by `python -m tssbias metaphlan data/manifests/<name>.tsv` from the staged FASTQs. The repository does not ship profiles. A count table whose column sum exceeds 100 is still converted to a percentage of the species-level column sum before the 0.5% rule.
+Species abundance is a MetaPhlAn 4 table at `{data_root}/mpa4_res/<cohort>/merged_mpa.txt`, written by `python -m tssbias metaphlan data/manifests/<name>.tsv` from the staged FASTQs. The repository does not ship profiles or a pinned species list. A count table whose column sum exceeds 100 is still converted to a percentage of the species-level column sum before the 0.5% rule. The species set for a cohort is every `s__` row at or above 0.5% in at least that cohort's minimum number of manifest samples. Mock is not screened. `prepare-references` asks NCBI for the RefSeq reference genome of each passing name, or the representative genome when NCBI has not marked a reference, and writes `{refseq_dir}/resolved_accessions.tsv`. That file is the lookup cache. It does not decide which species are analysed.
 
 ## GC-adjusted mixed model
 
@@ -79,7 +79,7 @@ Franzosa replication uses the 8 RNAlater DNA runs in `data/manifests/franzosa_rn
 
 ## HMP Phase III stool (replaces HYP)
 
-`hmp3_stool` is the public DNA shotgun cohort in place of the private HYP list. It is the same command slot: `discover`, `permutation`, `metaphlan`, and `cohort-correlation` take `--cohort hmp3_stool` (correlation always includes it). Abundance screen is 0.5% in at least 30 samples, species set `correlation`. There is no paired RNA.
+`hmp3_stool` is the public DNA shotgun cohort in place of the private HYP list. It is the same command slot: `discover`, `permutation`, `metaphlan`, and `cohort-correlation` take `--cohort hmp3_stool` (correlation always includes it). Abundance screen is 0.5% in at least 30 samples of its own MetaPhlAn table. There is no paired RNA.
 
 Source: BioProject PRJNA275349, SRA study SRP056641, ENA read-run table. Healthy US adult HMP Phase III WGS. The manifest is `data/manifests/hmp3_stool.tsv` (89 runs, 89 specimens). `sample_id` is the run accession. Every specimen that survives the rule is included.
 
@@ -95,7 +95,7 @@ Stage paired FASTQs at `{data_root}/fastq/hmp3_stool/{SRR}_1.fastq.gz` and `{SRR
 
 ## Liu et al. (replaces ARG)
 
-Display name: `Liu et al.` Internal id: `liu2016`. It uses the commands ARG used (`discover`, `permutation`, `metaphlan`, `upstream-scores`, and `cohort-correlation`) and the abundance screen 0.5% in at least 30 samples, on the species set `liu2016`. There is no paired RNA.
+Display name: `Liu et al.` Internal id: `liu2016`. It uses the commands ARG used (`discover`, `permutation`, `metaphlan`, `upstream-scores`, and `cohort-correlation`) and the abundance screen 0.5% in at least 30 samples of its own MetaPhlAn table. There is no paired RNA.
 
 Source: Liu et al., Scientific Reports 2016, BioProject PRJNA328899, SRA study SRP080787. The paper describes 110 healthy Mongolian adults and TruSeq libraries with an average insert of 500 bp. ENA `nominal_length` is blank on every run. The archive instrument is Illumina HiSeq 4000 on all 110; the paper says HiSeq 2500. The manifest follows the archive instrument and does not invent a per-sample insert.
 

@@ -18,7 +18,7 @@ import pandas as pd
 from scipy.stats import ttest_rel
 
 from tssbias.cohorts import longread_fastq, read_manifest
-from tssbias.commands.common import write_table
+from tssbias.commands.common import selected_species, write_table
 from tssbias.config import Config
 from tssbias.coverage import depth_from_bigwig, orient_windows
 from tssbias.errors import MissingInputError
@@ -132,7 +132,7 @@ def _one(cfg: Config, illumina_dir, longread_dir, sample: str, longread_id: str)
     per_gene.loc[~covered, "coverage_bias"] = np.nan
     require_tool("minimap2")
     rows = []
-    for species in cfg.species_in("matched"):
+    for species in selected_species(cfg, cfg.cohort("matched"), argparse.Namespace(species=None)):
         ref_cds = cfg.assembly_dir(species.assembly) / f"{species.assembly}_prodigal.fna"
         matrix = cfg.matrix_path(species.assembly, sample)
         if not ref_cds.exists() or not matrix.exists():

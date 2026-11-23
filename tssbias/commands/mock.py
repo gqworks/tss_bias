@@ -86,7 +86,7 @@ def _exact_strain(cfg: Config) -> None:
     from tssbias.metrics import coverage_bias
     import pandas as pd
 
-    species = Species("mock_merged", "mock_merged", "", None, ())
+    species = Species("mock_merged", "mock_merged", "", None)
     # Stage the merged fasta where the discovery helpers expect an assembly.
     staged = cfg.fasta_path("mock_merged")
     staged.parent.mkdir(parents=True, exist_ok=True)

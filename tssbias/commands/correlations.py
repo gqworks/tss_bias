@@ -1,12 +1,13 @@
 """Pairwise Pearson correlation of per-TSS bias vectors.
 
-Cohort replication uses species that pass 0.5% abundance in at least 5 samples
-of every cohort, and only the first 20 iHMP samples so the cohorts are closer
-in size. The other Illumina cohorts are ``liu2016`` (Liu et al., all 110
-public runs) and ``hmp3_stool`` (every HMP Phase III stool specimen that
-survives the one-run-per-alias rule).
-Platform comparison uses the long-read species set, with the iHMP
-threshold at 30 samples and long-read thresholds at 4.
+Each cohort contributes species that pass its own abundance screen
+(at or above 0.5%, with that cohort's minimum sample count) and whose
+RefSeq genome prepare-references has recorded. Only the first 20 iHMP
+samples are used so the Illumina cohorts are closer in size. The other
+Illumina cohorts are ``liu2016`` (Liu et al., all 110 public runs) and
+``hmp3_stool`` (every HMP Phase III stool specimen that survives the
+one-run-per-alias rule). Platform comparison uses the same rule for
+iHMP (30 samples), PacBio (4), and Nanopore (4).
 """
 
 from __future__ import annotations
@@ -19,8 +20,9 @@ import pandas as pd
 from scipy.stats import pearsonr
 
 from tssbias.cohorts import abundant_pairs, read_abundance, read_manifest
-from tssbias.commands.common import write_table
+from tssbias.commands.common import screened_names, write_table
 from tssbias.config import Config
+from tssbias.refseq import genomes_for
 from tssbias.coverage import read_matrix
 from tssbias.errors import MissingInputError
 from tssbias.logutil import get_logger
@@ -38,7 +40,7 @@ def run_cohorts(cfg: Config, args: argparse.Namespace) -> None:
     """
     del args
     names = ["hmp2", "franzosa", "liu2016", "hmp3_stool"]
-    _correlate(cfg, names, cfg.species_in("correlation"), balance={"hmp2": cfg.correlation_balance_n}, stem="cohort")
+    _correlate(cfg, names, balance={"hmp2": cfg.correlation_balance_n}, stem="cohort")
 
 
 def run_platforms(cfg: Config, args: argparse.Namespace) -> None:
@@ -49,20 +51,29 @@ def run_platforms(cfg: Config, args: argparse.Namespace) -> None:
         ``results/correlation/platform_summary.csv``
     """
     del args
-    _correlate(cfg, ["hmp2", "pacbio", "nanopore"], cfg.species_in("longread"), balance={}, stem="platform")
+    _correlate(cfg, ["hmp2", "pacbio", "nanopore"], balance={}, stem="platform")
 
 
-def _correlate(cfg: Config, cohort_names: list[str], species: list, balance: dict[str, int], stem: str) -> None:
+def _correlate(cfg: Config, cohort_names: list[str], balance: dict[str, int], stem: str) -> None:
     vectors: list[dict] = []
     for name in cohort_names:
         cohort = cfg.cohort(name)
-        samples = read_manifest(cohort.manifest)
+        samples = read_manifest(
+            cohort.manifest,
+            sample_column=cohort.sample_column,
+            longread_column=cohort.longread_column or None,
+        )
         if name in balance:
             samples = samples[: balance[name]]
         abundance = read_abundance(cohort.abundance_table or cfg.mpa_merged)
+        species = genomes_for(cfg.refseq_dir, screened_names(cfg, cohort, argparse.Namespace(species=None)))
         mask = abundant_pairs(
             abundance,
-            read_manifest(cohort.manifest),
+            read_manifest(
+                cohort.manifest,
+                sample_column=cohort.sample_column,
+                longread_column=cohort.longread_column or None,
+            ),
             [item.name for item in species],
             cohort.abundance_min_pct,
             cohort.abundance_min_samples,

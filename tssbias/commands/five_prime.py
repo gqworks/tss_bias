@@ -91,7 +91,7 @@ def _pairs(cfg: Config, cohort, args: argparse.Namespace):
         samples = [sample for sample in samples if sample.sample_id == args.sample]
         if not samples:
             raise MissingInputError(f"sample {args.sample} is not in the mock manifest", [cohort.manifest])
-    species = Species("ATCC MSA-1003", "mock_merged", "", None, ())
+    species = Species("ATCC MSA-1003", "mock_merged", "", None)
     return [(sample, species) for sample in samples]
 
 

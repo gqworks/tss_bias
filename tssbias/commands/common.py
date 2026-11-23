@@ -7,9 +7,10 @@ from pathlib import Path
 
 import pandas as pd
 
-from tssbias.cohorts import Sample, abundant_pairs, read_abundance, read_manifest
+from tssbias.cohorts import Sample, abundant_pairs, read_abundance, read_manifest, species_passing
 from tssbias.config import Cohort, Config, Species
 from tssbias.errors import MissingInputError
+from tssbias.refseq import genomes_for
 
 
 def add_cohort_args(parser: argparse.ArgumentParser) -> None:
@@ -63,17 +64,50 @@ def selected_samples(cfg: Config, cohort: Cohort, args: argparse.Namespace) -> l
     return samples
 
 
-def selected_species(cfg: Config, cohort: Cohort, args: argparse.Namespace) -> list[Species]:
-    """Pinned species for the cohort, optionally one name."""
-    species = cfg.species_in(cohort.species_set)
+def screened_names(cfg: Config, cohort: Cohort, args: argparse.Namespace) -> list[str]:
+    """MetaPhlAn species that pass this cohort's abundance screen.
+
+    Mock is unscreened: the ATCC command does not use this list.
+    """
+    if cohort.name == "mock":
+        raise MissingInputError(
+            "cohort mock is not abundance-screened. "
+            "Use `python -m tssbias mock` for the ATCC exact-strain reference.",
+            [cohort.manifest],
+        )
+    table_path = abundance_path(cfg, cohort)
+    abundance = read_abundance(table_path)
+    samples = read_manifest(
+        cohort.manifest,
+        sample_column=cohort.sample_column,
+        longread_column=cohort.longread_column or None,
+    )
+    names = species_passing(
+        abundance,
+        [sample.sample_id for sample in samples],
+        cohort.abundance_min_pct,
+        cohort.abundance_min_samples,
+    )
     if args.species is not None:
-        species = [item for item in species if item.name == args.species]
-        if not species:
+        if args.species not in names:
             raise MissingInputError(
-                f"species {args.species} is not in species set {cohort.species_set}",
-                [cfg.repo_root / "config" / "species.yaml"],
+                f"{args.species} did not pass the {cohort.abundance_min_pct}% / "
+                f"{cohort.abundance_min_samples}-sample screen for cohort {cohort.name}",
+                [table_path],
             )
-    return species
+        names = [args.species]
+    if not names:
+        raise MissingInputError(
+            f"no species passed the {cohort.abundance_min_pct}% / "
+            f"{cohort.abundance_min_samples}-sample screen for cohort {cohort.name}",
+            [table_path, cohort.manifest],
+        )
+    return names
+
+
+def selected_species(cfg: Config, cohort: Cohort, args: argparse.Namespace) -> list[Species]:
+    """Screened species whose RefSeq genome prepare-references has recorded."""
+    return genomes_for(cfg.refseq_dir, screened_names(cfg, cohort, args))
 
 
 def abundance_path(cfg: Config, cohort: Cohort) -> Path:
@@ -99,7 +133,11 @@ def passing_pairs(
     table_path = abundance_path(cfg, cohort)
     # Screen on the full manifest so the "at least N samples" rule is the
     # cohort rule, not the one-task subset from a job array.
-    full_manifest = read_manifest(cohort.manifest)
+    full_manifest = read_manifest(
+        cohort.manifest,
+        sample_column=cohort.sample_column,
+        longread_column=cohort.longread_column or None,
+    )
     abundance = read_abundance(table_path)
     mask = abundant_pairs(
         abundance,

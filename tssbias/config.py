@@ -7,9 +7,10 @@ Load order:
 3. ``{repo_root}``, ``{project}``, ``{data_root}``, ``{scratch_root}``,
    ``{results_dir}`` placeholders are expanded.
 
-Species pins and cohort thresholds live in the YAML so every command shares
-one definition of the 0.5% screen, the ±500 bp window, the permutation count,
-and the expression bins.
+Cohort thresholds live in the YAML so every command shares one definition
+of the 0.5% screen, the ±500 bp window, the permutation count, and the
+expression bins. Which species pass is read from the MetaPhlAn table.
+RefSeq accessions are resolved by prepare-references.
 """
 
 from __future__ import annotations
@@ -26,13 +27,12 @@ from tssbias.errors import MissingInputError
 
 @dataclass(frozen=True)
 class Species:
-    """One pinned RefSeq assembly."""
+    """One MetaPhlAn species and, once resolved, its RefSeq genome."""
 
     name: str
     assembly: str
     ftp: str
     taxid: int | None
-    sets: tuple[str, ...]
 
 
 @dataclass(frozen=True)
@@ -45,7 +45,6 @@ class Cohort:
     seq_type: str
     abundance_min_pct: float
     abundance_min_samples: int
-    species_set: str
     abundance_table: Path | None
     bioproject: str
     paired_rna: bool
@@ -113,12 +112,7 @@ class Config:
     metaphlan_db: str
     promotech_home: str
     figshare_url: str
-    species: dict[str, Species] = field(default_factory=dict)
     cohorts: dict[str, Cohort] = field(default_factory=dict)
-
-    def species_in(self, set_name: str) -> list[Species]:
-        """Pinned species whose ``sets`` include ``set_name``, in YAML order."""
-        return [item for item in self.species.values() if set_name in item.sets]
 
     def cohort(self, name: str) -> Cohort:
         """Return one cohort or raise MissingInputError."""
@@ -196,8 +190,7 @@ def load_config(path: Path | None = None) -> Config:
         tokens[key] = _expand(str(paths.get(key, "")), tokens)
         paths[key] = tokens[key]
     expanded = _expand_tree(raw, tokens)
-    species = _load_species(repo_root / "config" / "species.yaml")
-    return _build(path, repo_root, expanded, species)
+    return _build(path, repo_root, expanded)
 
 
 def _apply_env(raw: dict[str, Any]) -> None:
@@ -236,23 +229,7 @@ def _expand_tree(node: Any, tokens: dict[str, str]) -> Any:
     return node
 
 
-def _load_species(path: Path) -> dict[str, Species]:
-    if not path.is_file():
-        raise MissingInputError("species accession table", [path])
-    raw = yaml.safe_load(path.read_text())["species"]
-    species: dict[str, Species] = {}
-    for name, item in raw.items():
-        species[name] = Species(
-            name=name,
-            assembly=item["assembly"],
-            ftp=item["ftp"],
-            taxid=None if item.get("taxid") in (None, "") else int(item["taxid"]),
-            sets=tuple(item.get("sets", [])),
-        )
-    return species
-
-
-def _build(path: Path, repo_root: Path, raw: dict[str, Any], species: dict[str, Species]) -> Config:
+def _build(path: Path, repo_root: Path, raw: dict[str, Any]) -> Config:
     gadi = raw.get("gadi", {})
     paths = raw["paths"]
     analysis = raw["analysis"]
@@ -267,7 +244,6 @@ def _build(path: Path, repo_root: Path, raw: dict[str, Any], species: dict[str, 
             seq_type=item["seq_type"],
             abundance_min_pct=float(item["abundance_min_pct"]),
             abundance_min_samples=int(item["abundance_min_samples"]),
-            species_set=item["species_set"],
             abundance_table=Path(table) if table else None,
             bioproject=str(item.get("bioproject", "")),
             paired_rna=bool(item.get("paired_rna", False)),
@@ -331,6 +307,5 @@ def _build(path: Path, repo_root: Path, raw: dict[str, Any], species: dict[str, 
         metaphlan_db=str(software.get("metaphlan_db", "")),
         promotech_home=str(software.get("promotech_home", "")),
         figshare_url=str(raw.get("figshare", {}).get("project_url", "")),
-        species=species,
         cohorts=cohorts,
     )

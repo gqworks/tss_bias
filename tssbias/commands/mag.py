@@ -49,8 +49,9 @@ def run(cfg: Config, args: argparse.Namespace) -> None:
     for sample, species in pairs:
         if species.taxid is None:
             raise MissingInputError(
-                f"{species.name} has no taxid in config/species.yaml; the Kraken bin filter needs it",
-                [cfg.repo_root / "config" / "species.yaml"],
+                f"{species.name} has no taxid in the RefSeq accession cache. "
+                "Re-run prepare-references --force for this cohort.",
+                [cfg.refseq_dir / "resolved_accessions.tsv"],
             )
         bin_fasta = _best_bin(cfg, cohort.fastq_dir, sample.sample_id, species)
         if bin_fasta is None:

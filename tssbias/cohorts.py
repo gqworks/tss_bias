@@ -130,27 +130,24 @@ def read_abundance(path: Path) -> pd.DataFrame:
     return frame
 
 
-def abundant_pairs(
+def species_passing(
     abundance: pd.DataFrame,
-    samples: list[Sample],
-    species_names: list[str],
+    sample_ids: list[str],
     min_pct: float,
     min_samples: int,
-) -> pd.DataFrame:
-    """Apply the manuscript abundance screen.
+) -> list[str]:
+    """Species at or above ``min_pct`` in at least ``min_samples`` columns.
 
     Inputs:
         abundance: species x sample percentages from :func:`read_abundance`.
-        samples: cohort manifest, used for column order and membership.
-        species_names: pinned species for this analysis.
-        min_pct: minimum relative abundance (0.5).
+        sample_ids: manifest sample ids, in manifest order.
+        min_pct: minimum relative abundance. The approved screen is 0.5.
         min_samples: minimum number of samples at or above ``min_pct``.
     Outputs:
-        Boolean frame (species x sample) True where that pair is analysed.
-        Species that fail the sample-count rule are absent. Samples missing
-        from the abundance table raise MissingInputError.
+        Sorted ``s__`` names that pass. The set is the MetaPhlAn table, not
+        a pinned catalogue. Samples missing from the table raise
+        MissingInputError.
     """
-    sample_ids = [sample.sample_id for sample in samples]
     missing_samples = [sample for sample in sample_ids if sample not in abundance.columns]
     if missing_samples:
         preview = ", ".join(missing_samples[:8])
@@ -159,21 +156,38 @@ def abundant_pairs(
             f"abundance table is missing {len(missing_samples)} manifest samples: {preview}{extra}",
             [],
         )
-    present = [name for name in species_names if name in abundance.index]
-    missing_species = [name for name in species_names if name not in abundance.index]
-    if not present:
-        raise MissingInputError(
-            "none of the pinned species are in the abundance table: " + ", ".join(species_names),
-            [],
-        )
-    if missing_species:
-        # Pinned species that are simply absent from this cohort are not a
-        # missing file. They fail the abundance rule and are skipped.
-        pass
-    subset = abundance.loc[present, sample_ids]
+    subset = abundance.loc[:, sample_ids]
     above = subset >= min_pct
     keep = above.sum(axis=1) >= min_samples
-    return above.loc[keep]
+    return sorted(str(name) for name in above.index[keep])
+
+
+def abundant_pairs(
+    abundance: pd.DataFrame,
+    samples: list[Sample],
+    species_names: list[str],
+    min_pct: float,
+    min_samples: int,
+) -> pd.DataFrame:
+    """Boolean screen for one explicit species list.
+
+    Inputs:
+        abundance: species x sample percentages from :func:`read_abundance`.
+        samples: cohort manifest, used for column order and membership.
+        species_names: species already chosen by :func:`species_passing`.
+        min_pct: minimum relative abundance (0.5).
+        min_samples: minimum number of samples at or above ``min_pct``.
+    Outputs:
+        Boolean frame (species x sample) True where that pair is analysed.
+        Species that fail the sample-count rule are absent. Samples missing
+        from the abundance table raise MissingInputError.
+    """
+    sample_ids = [sample.sample_id for sample in samples]
+    names = species_passing(abundance, sample_ids, min_pct, min_samples)
+    present = [name for name in species_names if name in names]
+    if not present:
+        return pd.DataFrame(index=pd.Index([], name=abundance.index.name), columns=sample_ids, dtype=bool)
+    return abundance.loc[present, sample_ids] >= min_pct
 
 
 def fastq_paths(fastq_dir: Path, sample_id: str, seq_type: str) -> list[Path]:

@@ -77,7 +77,6 @@ cohorts:
     seq_type: illumina
     abundance_min_pct: 0.5
     abundance_min_samples: 30
-    species_set: hmp2
     abundance_table: "{data_root}/mpa4_res/hmp2/merged_mpa.txt"
     bioproject: PRJNA389280
     paired_rna: true
@@ -87,7 +86,6 @@ cohorts:
     seq_type: illumina
     abundance_min_pct: 0.5
     abundance_min_samples: 5
-    species_set: franzosa
     abundance_table: "{data_root}/mpa4_res/franzosa/merged_mpa.txt"
     bioproject: PRJNA188481
     paired_rna: false
@@ -99,7 +97,6 @@ cohorts:
     seq_type: illumina
     abundance_min_pct: 0.5
     abundance_min_samples: 30
-    species_set: liu2016
     abundance_table: "{data_root}/mpa4_res/liu2016/merged_mpa.txt"
     bioproject: PRJNA328899
     paired_rna: false
@@ -111,7 +108,6 @@ cohorts:
     seq_type: illumina
     abundance_min_pct: 0.5
     abundance_min_samples: 30
-    species_set: correlation
     abundance_table: "{data_root}/mpa4_res/hmp3_stool/merged_mpa.txt"
     bioproject: PRJNA275349
     paired_rna: false
@@ -121,7 +117,6 @@ cohorts:
     seq_type: pacbio
     abundance_min_pct: 0.5
     abundance_min_samples: 4
-    species_set: longread
     abundance_table: "{data_root}/mpa4_res/pacbio/merged_mpa.txt"
     bioproject: PRJNA754443
     paired_rna: false
@@ -131,7 +126,6 @@ cohorts:
     seq_type: nanopore
     abundance_min_pct: 0.5
     abundance_min_samples: 4
-    species_set: longread
     abundance_table: "{data_root}/mpa4_res/nanopore/merged_mpa.txt"
     bioproject: PRJNA820119
     paired_rna: false
@@ -143,7 +137,6 @@ cohorts:
     seq_type: illumina
     abundance_min_pct: 0.5
     abundance_min_samples: 1
-    species_set: mock
     abundance_table: "{data_root}/mpa4_res/mock/merged_mpa.txt"
     bioproject: PRJNA510527
     paired_rna: false
@@ -155,7 +148,6 @@ cohorts:
     seq_type: illumina
     abundance_min_pct: 0.5
     abundance_min_samples: 5
-    species_set: matched
     abundance_table: "{data_root}/mpa4_res/matched/merged_mpa.txt"
     bioproject: PRJNA820119
     paired_rna: false

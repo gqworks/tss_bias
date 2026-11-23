@@ -99,7 +99,6 @@ def test_hmp3_stool_replaces_private_hyp():
     assert cohort.bioproject == "PRJNA275349"
     assert cohort.abundance_min_pct == 0.5
     assert cohort.abundance_min_samples == 30
-    assert cohort.species_set == "correlation"
     assert cohort.paired_rna is False
     frame = pd.read_csv(cohort.manifest, sep="\t", dtype=str)
     assert len(frame) == 89
@@ -130,7 +129,6 @@ def test_liu2016_replaces_private_arg():
     assert cohort.bioproject == "PRJNA328899"
     assert cohort.abundance_min_pct == 0.5
     assert cohort.abundance_min_samples == 30
-    assert cohort.species_set == "liu2016"
     assert cohort.paired_rna is False
     assert cohort.fastq_dir.name == "liu2016"
     frame = pd.read_csv(cohort.manifest, sep="\t", dtype=str)
@@ -337,3 +335,66 @@ def test_metaphlan_merge_keeps_species_columns(tmp_path):
     assert row.loc["k__Bacteria|s__A", "s1"] == 10
     assert row.loc["k__Bacteria|s__A", "s2"] == 4
     assert row.loc["k__Bacteria|s__C", "s1"] == 0
+
+
+def test_species_screen_uses_the_approved_thresholds():
+    from tssbias.cohorts import species_passing
+    from tssbias.config import load_config
+
+    cfg = load_config()
+    assert not (cfg.repo_root / "config" / "species.yaml").exists()
+    expected = {
+        "hmp2": 30,
+        "franzosa": 5,
+        "hmp3_stool": 30,
+        "liu2016": 30,
+        "nanopore": 4,
+        "pacbio": 4,
+        "matched": 5,
+    }
+    for name, minimum in expected.items():
+        cohort = cfg.cohort(name)
+        assert cohort.abundance_min_pct == 0.5
+        assert cohort.abundance_min_samples == minimum
+    samples = [f"s{i}" for i in range(30)]
+    rows = {
+        "s__Kept": [0.5] * 30,
+        "s__Borderline": [0.5] * 29 + [0.49],
+        "s__Low": [0.49] * 30,
+    }
+    abundance = pd.DataFrame(rows, index=samples).T
+    assert species_passing(abundance, samples, 0.5, 30) == ["s__Kept"]
+    assert species_passing(abundance, samples, 0.5, 5) == ["s__Borderline", "s__Kept"]
+
+
+def test_refseq_choice_prefers_reference_genome(tmp_path):
+    from tssbias.config import Species
+    from tssbias.refseq import assembly_from_summary, binomial, choose_assembly, read_resolved, write_resolved
+
+    assert binomial("s__Phocaeicola_vulgatus") == "Phocaeicola vulgatus"
+    representative = {
+        "assemblyaccession": "GCF_000000001.1",
+        "assemblyname": "rep",
+        "ftppath_refseq": "ftp://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/000/001/GCF_000000001.1_rep",
+        "refseq_category": "representative genome",
+        "taxid": "1",
+    }
+    reference = {
+        "assemblyaccession": "GCF_000000009.1",
+        "assemblyname": "ref",
+        "ftppath_refseq": "ftp://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/000/009/GCF_000000009.1_ref",
+        "refseq_category": "reference genome",
+        "taxid": "9",
+    }
+    chosen = choose_assembly([representative, reference])
+    assert chosen["assemblyaccession"] == "GCF_000000009.1"
+    assembly, ftp, taxid = assembly_from_summary(chosen)
+    assert assembly == "GCF_000000009.1_ref"
+    assert ftp.startswith("https://ftp.ncbi.nlm.nih.gov/")
+    assert taxid == 9
+    path = tmp_path / "resolved_accessions.tsv"
+    write_resolved(path, {"s__A": Species("s__A", assembly, ftp, taxid), "s__B": Species("s__B", "", "", None)})
+    loaded = read_resolved(path)
+    assert loaded["s__A"].assembly == assembly
+    assert loaded["s__B"].assembly == ""
+    assert loaded["s__B"].taxid is None

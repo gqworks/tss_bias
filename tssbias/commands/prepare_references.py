@@ -1,6 +1,8 @@
-"""Download pinned RefSeq genomes, call Prodigal, and write the TSS table.
+"""Resolve RefSeq genomes for screened species, call Prodigal, and write TSS tables.
 
-TSS sites more than 500 bp from neighbouring gene starts are written to
+The species list is the cohort MetaPhlAn screen. NCBI supplies the reference
+genome, or the representative genome when there is no reference. TSS sites
+more than 500 bp from neighbouring gene starts are written to
 ``{assembly}_filtered_tss.csv``. Bowtie2 (Illumina) and BWA (long-read)
 indexes are built when the cohort needs them.
 """
@@ -13,32 +15,47 @@ import shutil
 import urllib.request
 from pathlib import Path
 
-from tssbias.commands.common import selected_species
+from tssbias.commands.common import screened_names
 from tssbias.config import Config, Species
 from tssbias.errors import MissingInputError
 from tssbias.external import require_tool, run_command
 from tssbias.logutil import get_logger
+from tssbias.refseq import lookup_refseq, read_resolved, resolved_table, write_resolved
 from tssbias.tss import filter_isolated_tss, parse_prodigal_gff
 
 LOG = get_logger("tssbias.prepare-references")
 
 
 def run(cfg: Config, args: argparse.Namespace) -> None:
-    """Prepare every pinned assembly in a cohort.
+    """Resolve and prepare every species that passes the cohort screen.
 
     Inputs:
         cfg: resolved config.
         args: ``--cohort`` and optional ``--species``.
     Outputs:
-        FASTA, Prodigal GFF, filtered TSS CSV, and an aligner index under
-        ``refseq_dir``. Raises MissingInputError if the FTP download fails.
+        ``resolved_accessions.tsv``, FASTA, Prodigal GFF, filtered TSS CSV,
+        and an aligner index under ``refseq_dir``. A species with no RefSeq
+        reference or representative genome is recorded as unresolved and
+        skipped. Raises MissingInputError if the FTP download fails.
     """
     cohort = cfg.cohort(args.cohort)
-    species = selected_species(cfg, cohort, args)
+    names = screened_names(cfg, cohort, args)
     index = "bwa" if cohort.seq_type in {"pacbio", "nanopore"} else "bowtie2"
-    for item in species:
-        _prepare_one(cfg, item, index=index, window_bp=cfg.window_bp, force=args.force)
-    LOG.info("prepared %s assemblies for cohort %s", len(species), cohort.name)
+    cache_path = resolved_table(cfg.refseq_dir)
+    cached = read_resolved(cache_path)
+    prepared = 0
+    for name in names:
+        current = cached.get(name)
+        if args.force or current is None:
+            current = lookup_refseq(name)
+            cached[name] = current
+            write_resolved(cache_path, cached)
+        if not current.assembly:
+            LOG.info("no RefSeq reference or representative genome for %s", name)
+            continue
+        _prepare_one(cfg, current, index=index, window_bp=cfg.window_bp, force=args.force)
+        prepared += 1
+    LOG.info("prepared %s assemblies for cohort %s (%s screened)", prepared, cohort.name, len(names))
 
 
 def _prepare_one(cfg: Config, species: Species, *, index: str, window_bp: int, force: bool) -> None:
