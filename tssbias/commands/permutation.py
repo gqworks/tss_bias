@@ -2,7 +2,8 @@
 
 Illumina uses 500 permutations. Long-read cohorts use 100. Pass
 ``--min-gene-bp 1000`` for the long-gene panel. ``--metric gc`` permutes GC
-bias instead of coverage and does not need a bigWig.
+bias instead of coverage and does not need a depth table. Coverage
+permutation reads the ``samtools depth -aa`` table written by discover.
 """
 
 from __future__ import annotations
@@ -14,7 +15,7 @@ import pandas as pd
 
 from tssbias.commands.common import passing_pairs, write_table
 from tssbias.config import Config
-from tssbias.coverage import depth_from_bigwig
+from tssbias.coverage import depth_from_table
 from tssbias.errors import MissingInputError
 from tssbias.fasta import read_fasta
 from tssbias.logutil import get_logger
@@ -78,14 +79,14 @@ def _one(cfg: Config, seq_type: str, sample: str, assembly: str, species: str, m
         raise MissingInputError("filtered TSS table", [tss_path])
     tss = read_tss_table(tss_path)
     if metric == "coverage":
-        bigwig = cfg.bigwig_path(assembly, sample)
-        if not bigwig.exists():
+        depth = cfg.depth_path(assembly, sample)
+        if not depth.exists():
             raise MissingInputError(
-                "coverage bigWig. Run python -m tssbias discover for this cohort first.",
-                [bigwig],
+                "samtools depth table. Run python -m tssbias discover for this cohort first.",
+                [depth],
             )
         result = permute_coverage(
-            depth_from_bigwig(bigwig),
+            depth_from_table(depth),
             tss,
             n_permutations=n_perm,
             seed=cfg.seed,

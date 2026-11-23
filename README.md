@@ -31,6 +31,8 @@ The lab scripts summed an asymmetric 500-vs-501 bp split of the z-scored window.
 
 Species abundance is a MetaPhlAn 4 table at `{data_root}/mpa4_res/<cohort>/merged_mpa.txt`, written by `python -m tssbias metaphlan data/manifests/<name>.tsv` from the staged FASTQs. The repository does not ship profiles or a pinned species list. A count table whose column sum exceeds 100 is still converted to a percentage of the species-level column sum before the 0.5% rule. The species set for a cohort is every `s__` row at or above 0.5% in at least that cohort's minimum number of manifest samples. Mock is not screened. `prepare-references` asks NCBI for the RefSeq reference genome of each passing name, or the representative genome when NCBI has not marked a reference, and writes `{refseq_dir}/resolved_accessions.tsv`. That file is the lookup cache. It does not decide which species are analysed.
 
+`discover` aligns each sample once. Bowtie2 (Illumina, `--no-unal`) or BWA (long read) maps the reads to a concatenated FASTA of the whole genomes of the species that pass in that sample. `samtools view -F 4` drops anything still unmapped. The alignment is split into `{scratch}/bams/{assembly}_{sample}.sorted.bam` with the original contig names restored, and `samtools depth -aa` writes `{scratch}/depth/{assembly}_{sample}.tsv` for every reference base, including contigs with no reads. The ±500 bp CSV is unchanged. Permutation reads that depth table. BAMs stay for five-prime, upstream scores, substitutions, and expression. References are whole genomes, not TSS windows. Concatenated alignment assigns each read to a single best genome. Separate per-genome indexes would have counted a read on every genome it matched. TSS shape is mostly species-specific; shared sequence between references is where the two assignments differ.
+
 ## GC-adjusted mixed model
 
 Manuscript formula, fit by `gc-lmm`:
@@ -167,7 +169,7 @@ Without staged reads the test suite, `--help`, and `check-inputs` run. Every ana
 
 A full rerun needs, on Gadi or another machine:
 
-* NCI project code (`TSS_PROJECT`) and `config/gadi.local.yaml` (`/g/data/{project}` for references and results, `/scratch/{project}` for BAMs and bigWigs).
+* NCI project code (`TSS_PROJECT`) and `config/gadi.local.yaml` (`/g/data/{project}` for references and results, `/scratch/{project}` for BAMs and depth tables).
 * FASTQs named `{sample}_1.fastq.gz` and `{sample}_2.fastq.gz` (Illumina) or `{sample}.fastq.gz` (PacBio, Nanopore) under each cohort's `fastq_dir`.
 * `{data_root}/mpa4_res/<cohort>/merged_mpa.txt` from `python -m tssbias metaphlan data/manifests/<name>.tsv` (MetaPhlAn 4.1.0).
 * Prodigal 2.6.3, Bowtie2, BWA, samtools, deepTools `bamCoverage`, kallisto, and the extra tools named in `environment.yml` for ART, MEGAHIT, MetaBAT2, Kraken2, CheckM2, sylph, minimap2, and Promotech.

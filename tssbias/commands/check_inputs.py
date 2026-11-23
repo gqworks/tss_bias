@@ -14,10 +14,10 @@ from tssbias.logutil import get_logger
 LOG = get_logger("tssbias.check-inputs")
 
 TOOLS = {
-    "discover": ["bowtie2", "samtools", "bamCoverage", "prodigal"],
-    "longread": ["bwa", "samtools", "bamCoverage", "prodigal"],
+    "discover": ["bowtie2", "bowtie2-build", "samtools", "prodigal"],
+    "longread": ["bwa", "samtools", "prodigal"],
     "expression": ["kallisto", "samtools"],
-    "mappability": ["art_illumina", "bowtie2", "samtools", "bamCoverage"],
+    "mappability": ["art_illumina", "bowtie2", "bowtie2-build", "samtools"],
     "mismatch": ["bowtie2", "samtools", "bamCoverage"],
     "mag": ["megahit", "metabat2", "kraken2", "bowtie2", "samtools"],
     "promotech": ["python"],

@@ -145,6 +145,11 @@ class Config:
         suffix = f"_{tag}" if tag else ""
         return self.bigwig_dir / f"{assembly}_{sample}{suffix}.bw"
 
+    def depth_path(self, assembly: str, sample: str, tag: str = "") -> Path:
+        """Per-base depth written by ``samtools depth -aa`` for permutation."""
+        suffix = f"_{tag}" if tag else ""
+        return self.scratch_root / "depth" / f"{assembly}_{sample}{suffix}.tsv"
+
 
 def find_repo_root(start: Path) -> Path:
     """Walk parents until ``config/default.yaml`` is found."""

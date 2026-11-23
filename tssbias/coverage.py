@@ -75,6 +75,32 @@ def bias_table(tss: pd.DataFrame, windows: np.ndarray, covered: np.ndarray, wind
     return out
 
 
+def depth_from_table(path: Path) -> dict[str, np.ndarray]:
+    """Load ``samtools depth -aa`` output. Missing positions stay 0.
+
+    Inputs:
+        path: tab-separated contig, 1-based position, depth.
+    Outputs:
+        Dict of contig to per-base coverage, index 0 is the first base.
+    """
+    positions: dict[str, list[int]] = {}
+    depths: dict[str, list[float]] = {}
+    with Path(path).open() as handle:
+        for line in handle:
+            if not line.strip():
+                continue
+            chrom, pos, depth = line.split()[:3]
+            positions.setdefault(chrom, []).append(int(pos))
+            depths.setdefault(chrom, []).append(float(depth))
+    arrays: dict[str, np.ndarray] = {}
+    for chrom, coords in positions.items():
+        length = max(coords)
+        array = np.zeros(length, dtype=float)
+        array[np.asarray(coords, dtype=int) - 1] = np.asarray(depths[chrom], dtype=float)
+        arrays[chrom] = array
+    return arrays
+
+
 def depth_from_bigwig(path: Path) -> dict[str, np.ndarray]:
     """Load a bigWig into per-contig float arrays. Missing bases are 0.
 

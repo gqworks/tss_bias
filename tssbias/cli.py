@@ -39,7 +39,11 @@ def main(argv: list[str] | None = None) -> int:
         return command
 
     cohort_parser("prepare-references", "Download RefSeq genomes and call Prodigal.", prepare_references.run)
-    cohort_parser("discover", "Align reads and write ±500 bp TSS coverage matrices.", discover.run)
+    cohort_parser(
+        "discover",
+        "Align each sample once to its passing genomes and write ±500 bp TSS matrices.",
+        discover.run,
+    )
     cohort_parser("check-inputs", "Report missing files and tools for a cohort.", check_inputs.run)
 
     def perm_extra(command: argparse.ArgumentParser) -> None:

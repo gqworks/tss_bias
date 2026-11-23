@@ -16,7 +16,7 @@ import pandas as pd
 from tssbias.commands.common import passing_pairs, write_table
 from tssbias.commands.discover import _one_pair
 from tssbias.config import Config
-from tssbias.coverage import depth_from_bigwig
+from tssbias.coverage import depth_from_table
 from tssbias.errors import MissingInputError
 from tssbias.external import require_tool, run_command
 from tssbias.logutil import get_logger
@@ -68,9 +68,11 @@ def run(cfg: Config, args: argparse.Namespace) -> None:
             _gzip_to(art_r1, staged_r1)
             _gzip_to(art_r2, staged_r2)
         _one_pair(cfg, "illumina", stage, sim_sample, species, force=args.force)
-        bigwig = cfg.bigwig_path(species.assembly, sim_sample)
+        depth = cfg.depth_path(species.assembly, sim_sample)
+        if not depth.exists():
+            raise MissingInputError("simulated alignment did not write a depth table", [depth])
         result = permute_coverage(
-            depth_from_bigwig(bigwig),
+            depth_from_table(depth),
             read_tss_table(cfg.tss_table_path(species.assembly)),
             n_permutations=cfg.n_permutations,
             seed=cfg.seed,
