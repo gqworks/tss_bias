@@ -38,7 +38,7 @@ def run(cfg: Config, args: argparse.Namespace) -> None:
         does not merge.
     """
     manifest = _resolve_manifest(cfg, Path(args.manifest))
-    cohort = _cohort_for_manifest(cfg, manifest)
+    cohort = _cohort_for_manifest(cfg, manifest, getattr(args, "cohort", None))
     if cohort is None:
         name = manifest.stem
         fastq_dir = cfg.data_root / "fastq" / name
@@ -49,7 +49,11 @@ def run(cfg: Config, args: argparse.Namespace) -> None:
         name = cohort.name
         fastq_dir = cohort.fastq_dir
         seq_type = cohort.seq_type
-        samples = read_manifest(cohort.manifest)
+        samples = read_manifest(
+            cohort.manifest,
+            sample_column=cohort.sample_column,
+            longread_column=cohort.longread_column or None,
+        )
         destination = abundance_path(cfg, cohort)
     selected = _select(samples, manifest, args)
     missing = _missing_fastqs(selected, fastq_dir, seq_type)
@@ -100,12 +104,21 @@ def _resolve_manifest(cfg: Config, raw: Path) -> Path:
     raise MissingInputError(f"sample manifest {raw}", [candidate])
 
 
-def _cohort_for_manifest(cfg: Config, manifest: Path) -> Cohort | None:
+def _cohort_for_manifest(cfg: Config, manifest: Path, cohort_name: str | None) -> Cohort | None:
+    if cohort_name:
+        cohort = cfg.cohort(cohort_name)
+        if cohort.manifest.resolve() != manifest.resolve():
+            raise MissingInputError(
+                f"cohort {cohort.name} reads {cohort.manifest.name}, not {manifest.name}",
+                [cohort.manifest, manifest],
+            )
+        return cohort
     resolved = manifest.resolve()
-    for cohort in cfg.cohorts.values():
-        if cohort.manifest.resolve() == resolved:
-            return cohort
-    return None
+    matches = [cohort for cohort in cfg.cohorts.values() if cohort.manifest.resolve() == resolved]
+    if not matches:
+        return None
+    primary = [cohort for cohort in matches if cohort.sample_column == "sample_id"]
+    return primary[0] if primary else matches[0]
 
 
 def _seq_type(manifest: Path) -> str:

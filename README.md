@@ -25,7 +25,7 @@ A missing FASTQ, abundance table, BAM, or reference raises a missing-input error
 * Abundance-normalised TPM: `norm_tpm = 1e6 * kallisto_tpm / mapped_metagenomic_reads`. Groups on `norm_tpm`: zero (`== 0`), low (`< 100`), mid (`< 1000`), high (`>= 1000`).
 * Log expression: `ln(norm_tpm + 0.001)`.
 * Permutation: rotate TSS coordinates on each contig so successive gaps stay the same (modulus = the last TSS). One-sided p = `min(1, (#{null mean > observed} + 1) / n)`. Illumina n = 500, long-read n = 100. Benjamini–Hochberg FDR 0.05 across the tests in the run.
-* Species must be at or above 0.5% relative abundance in enough samples (iHMP 30, Franzosa 5, Liu et al. 10, HMP Phase III stool 5, PacBio/Nanopore 4).
+* Species must be at or above 0.5% relative abundance in enough samples (iHMP 30, Franzosa 5, Liu et al. 30, HMP Phase III stool 30, PacBio/Nanopore 4, matched Illumina 5).
 
 The lab scripts summed an asymmetric 500-vs-501 bp split of the z-scored window. This pipeline uses the manuscript mean of the two 500 bp flanks. Accessions follow the assemblies those scripts actually ran. A methods table in the revision draft swaps *F. prausnitzii* and *P. vulgatus*; `config/species.yaml` does not.
 
@@ -79,7 +79,7 @@ Franzosa replication uses the 8 RNAlater DNA runs in `data/manifests/franzosa_rn
 
 ## HMP Phase III stool (replaces HYP)
 
-`hmp3_stool` is the public DNA shotgun cohort in place of the private HYP list. It is the same command slot: `discover`, `permutation`, `metaphlan`, and `cohort-correlation` take `--cohort hmp3_stool` (correlation always includes it). Abundance screen is the HYP bar, 0.5% in at least 5 samples, species set `correlation`. There is no paired RNA.
+`hmp3_stool` is the public DNA shotgun cohort in place of the private HYP list. It is the same command slot: `discover`, `permutation`, `metaphlan`, and `cohort-correlation` take `--cohort hmp3_stool` (correlation always includes it). Abundance screen is 0.5% in at least 30 samples, species set `correlation`. There is no paired RNA.
 
 Source: BioProject PRJNA275349, SRA study SRP056641, ENA read-run table. Healthy US adult HMP Phase III WGS. The manifest is `data/manifests/hmp3_stool.tsv` (89 runs, 89 specimens). `sample_id` is the run accession. Every specimen that survives the rule is included.
 
@@ -95,7 +95,7 @@ Stage paired FASTQs at `{data_root}/fastq/hmp3_stool/{SRR}_1.fastq.gz` and `{SRR
 
 ## Liu et al. (replaces ARG)
 
-Display name: `Liu et al.` Internal id: `liu2016`. It uses the commands ARG used (`discover`, `permutation`, `metaphlan`, `upstream-scores`, and `cohort-correlation`) and the same abundance screen, 0.5% in at least 10 samples, on the species set `liu2016`. There is no paired RNA.
+Display name: `Liu et al.` Internal id: `liu2016`. It uses the commands ARG used (`discover`, `permutation`, `metaphlan`, `upstream-scores`, and `cohort-correlation`) and the abundance screen 0.5% in at least 30 samples, on the species set `liu2016`. There is no paired RNA.
 
 Source: Liu et al., Scientific Reports 2016, BioProject PRJNA328899, SRA study SRP080787. The paper describes 110 healthy Mongolian adults and TruSeq libraries with an average insert of 500 bp. ENA `nominal_length` is blank on every run. The archive instrument is Illumina HiSeq 4000 on all 110; the paper says HiSeq 2500. The manifest follows the archive instrument and does not invent a per-sample insert.
 
@@ -124,13 +124,11 @@ The previous 8-row list was already these eight accessions. The commands do not 
 
 ## PacBio, Nanopore, and matched long reads
 
-These three manifests use the same columns. `sample_id` is the SRA run. No cluster path is stored. Each alias and BioSample in the source list has one run, so the one-run-per-sample rule drops nothing. Rows are sorted by `sample_alias`, then `sample_id`.
+PacBio and Nanopore use the same run columns. `sample_id` is the SRA run. No cluster path is stored. Rows are sorted by `sample_alias`, then `sample_id`. Nanopore adds `shortread_srr`.
 
 `data/manifests/pacbio.tsv` is 11 Sequel II WGS runs, BioProject PRJNA754443, SRA study SRP332749. Layout is `SINGLE`. Aliases are `1_baseline` through `6_baseline` and the matching `*_treatment` rows.
 
-`data/manifests/nanopore.tsv` is 20 PromethION WGS runs, BioProject PRJNA820119, SRA study SRP366030. Layout is `SINGLE`. The project has 200 ONT gut shotgun runs (CD1–CD100 and TD1–TD100), one run per alias. This manifest keeps the previous CD91–CD100 block and the ten preceding CD aliases, CD81–CD100. Each alias has one run, so nothing is dropped inside that block. CD1–CD80 and the TD series are not included.
-
-`data/manifests/matched_longread.tsv` is the 10 Illumina NovaSeq runs from the same BioProject, one per donor (CD91–CD100). `sample_id` is that paired-end WGS run. `longread_srr` is the PromethION run whose alias is the same `CD` id. The short-read and long-read deposits are different BioSamples, so both accessions stay on the row.
+`data/manifests/nanopore.tsv` is 20 donors, CD81–CD100, from BioProject PRJNA820119, SRA study SRP366030. `sample_id` is the PromethION WGS run (layout `SINGLE`). `shortread_srr` is the Illumina NovaSeq 6000 paired-end WGS run for the same `CD` alias (`META20IMWJ28_<CD>`). The two deposits are different BioSamples. Each of these 20 aliases has one ONT run and one Illumina run, so none of CD81–CD100 is dropped. CD1–CD80 and the TD series are not included. There is no separate matched-long-read manifest: `matched-longread` and `download` both read this file. The matched cohort treats `shortread_srr` as the sample and `sample_id` as the long read.
 
 ## Download FASTQs
 
@@ -138,7 +136,7 @@ These three manifests use the same columns. `sample_id` is the SRA run. No clust
 python -m tssbias download data/manifests/hmp2.tsv
 ```
 
-The path is the manifest. `sample_id` is the SRA run. Files land in `{data_root}/fastq/<manifest stem>/{SRR}_1.fastq.gz` and `_2.fastq.gz` (`hmp2.tsv` → `fastq/hmp2/`). `rna_id` is written under `rna/`, and `longread_srr` under `longread/`, with the same `{SRR}_1` / `_2` names when the dump is paired. A single-end dump is kept as the one file `fasterq-dump` wrote. Runs already on disk are skipped. The command exits if `fasterq-dump` is not on `PATH`. On Gadi, put that same command in a PBS job. Analysis commands still do not download reads themselves.
+The path is the manifest. `sample_id` is the SRA run. Files land in `{data_root}/fastq/<manifest stem>/{SRR}_1.fastq.gz` and `_2.fastq.gz` (`hmp2.tsv` → `fastq/hmp2/`). `rna_id` is written under `rna/`, `longread_srr` under `longread/`, and `shortread_srr` under `shortread/`, with the same `{SRR}_1` / `_2` names when the dump is paired. A single-end dump is kept as the one file `fasterq-dump` wrote. Runs already on disk are skipped. The command exits if `fasterq-dump` is not on `PATH`. On Gadi, put that same command in a PBS job. Analysis commands still do not download reads themselves.
 
 ## Species abundance
 
@@ -146,7 +144,7 @@ The path is the manifest. `sample_id` is the SRA run. Files land in `{data_root}
 python -m tssbias metaphlan data/manifests/hmp2.tsv
 ```
 
-The path is the manifest. FASTQs are the files already staged for that cohort (`fastq_dir` in the config; Illumina `{sample_id}_1.fastq.gz` and `_2`, long read `{sample_id}.fastq.gz`). The command does not download them. A missing FASTQ exits 2 and writes nothing. `metaphlan` must be on `PATH` (MetaPhlAn 4.1.0 in `environment.yml`). Profiles land in `{data_root}/mpa4_res/<cohort>/{sample_id}.txt`. The merged species table, which `discover` and the other abundance screens read, is `{data_root}/mpa4_res/<cohort>/merged_mpa.txt`. The same command covers every manifest, including `franzosa_rnalater.tsv` (`mpa4_res/franzosa/`), `matched_longread.tsv` (`mpa4_res/matched/`), PacBio, and Nanopore. On Gadi, `jobs/gadi/metaphlan.pbs` with `TSS_COHORT` profiles one array index; rerun the command with no index to merge.
+The path is the manifest. FASTQs are the files already staged for that cohort (`fastq_dir` in the config; Illumina `{sample_id}_1.fastq.gz` and `_2`, long read `{sample_id}.fastq.gz`). The command does not download them. A missing FASTQ exits 2 and writes nothing. `metaphlan` must be on `PATH` (MetaPhlAn 4.1.0 in `environment.yml`). Profiles land in `{data_root}/mpa4_res/<cohort>/{sample_id}.txt`. The merged species table, which `discover` and the other abundance screens read, is `{data_root}/mpa4_res/<cohort>/merged_mpa.txt`. The same command covers every manifest, including `franzosa_rnalater.tsv` (`mpa4_res/franzosa/`), PacBio, and Nanopore. `nanopore.tsv` without `--cohort` profiles the ONT runs. `python -m tssbias metaphlan data/manifests/nanopore.tsv --cohort matched` profiles the Illumina `shortread_srr` runs into `mpa4_res/matched/`. On Gadi, `jobs/gadi/metaphlan.pbs` with `TSS_COHORT` profiles one array index; rerun the command with no index to merge.
 
 ## ATCC MSA-1003
 
@@ -157,11 +155,11 @@ python -m tssbias download data/manifests/mock.tsv
 python -m tssbias mock
 python -m tssbias five-prime --cohort mock
 python -m tssbias mock --hifi
-python -m tssbias download data/manifests/matched_longread.tsv
+python -m tssbias download data/manifests/nanopore.tsv
 python -m tssbias matched-longread
 ```
 
-Illumina FASTQs land in `{data_root}/fastq/mock/`. The HiFi file lands in `{data_root}/fastq/mock/longread/`. Gut pairs land in `{data_root}/fastq/matched_longread/` and `{data_root}/fastq/matched_longread/longread/`. `mock` is the exact-strain no-bias control on the 20 concatenated ATCC genomes. `five-prime --cohort mock` is the 5′ check on that one sample. `mock --hifi` maps those Illumina reads to a 100,000-read subset of `SRR11606871` and contrasts that bias with the exact-strain result. The subset is written to `{scratch_root}/mock/hifi/SRR11606871_100k.fa` before Prodigal, Bowtie2, or minimap2. `matched-longread` stays the gut same-sample test.
+Illumina FASTQs land in `{data_root}/fastq/mock/`. The HiFi file lands in `{data_root}/fastq/mock/longread/`. For the gut pairs, PromethION FASTQs land in `{data_root}/fastq/nanopore/` and the matched NovaSeq FASTQs in `{data_root}/fastq/nanopore/shortread/`. `mock` is the exact-strain no-bias control on the 20 concatenated ATCC genomes. `five-prime --cohort mock` is the 5′ check on that one sample. `mock --hifi` maps those Illumina reads to a 100,000-read subset of `SRR11606871` and contrasts that bias with the exact-strain result. The subset is written to `{scratch_root}/mock/hifi/SRR11606871_100k.fa` before Prodigal, Bowtie2, or minimap2. `matched-longread` reads `data/manifests/nanopore.tsv` and stays the gut same-sample test.
 
 ## What runs here, and what needs Gadi
 

@@ -22,48 +22,70 @@ class Sample:
     """One sequencing sample.
 
     ``rna_id`` is set for cohorts with matched metatranscriptomes (iHMP).
-    ``longread_id`` is set for the matched short/long cohort.
+    ``longread_id`` is set when the manifest names a second long-read run.
+    ``shortread_id`` is the Illumina run paired with an ONT ``sample_id``.
     """
 
     sample_id: str
     rna_id: str | None = None
     longread_id: str | None = None
+    shortread_id: str | None = None
 
 
-def read_manifest(path: Path) -> list[Sample]:
-    """Read an ID-only manifest.
+def _cell(row, column: str | None) -> str | None:
+    if not column or not hasattr(row, column):
+        return None
+    value = getattr(row, column)
+    if value is None or str(value) == "nan" or str(value) == "":
+        return None
+    return str(value)
+
+
+def read_manifest(
+    path: Path,
+    sample_column: str = "sample_id",
+    longread_column: str | None = None,
+) -> list[Sample]:
+    """Read a sample manifest.
 
     Inputs:
-        path: TSV with header ``sample_id`` and optional ``rna_id``,
-            ``illumina_srr``, ``longread_srr``.
+        path: TSV with ``sample_id`` and optional ``rna_id``, ``longread_srr``,
+            and ``shortread_srr``.
+        sample_column: column used as ``Sample.sample_id``. The matched
+            cohort passes ``shortread_srr`` so the Illumina run is the sample.
+        longread_column: column used as ``Sample.longread_id``. None uses
+            ``longread_srr`` when that column exists. The matched cohort
+            passes ``sample_id``, which is the ONT run on ``nanopore.tsv``.
     Outputs:
-        Samples in file order. For matched manifests, ``sample_id`` is the
-        Illumina SRR when that column is present.
+        Samples in file order. A row with an empty ``sample_column`` is
+        dropped. When ``longread_column`` is set explicitly, a row with an
+        empty long-read accession is dropped too.
     """
     if not path.exists():
         raise MissingInputError(f"sample manifest for {path.name}", [path])
     frame = pd.read_csv(path, sep="\t", dtype=str)
-    if "illumina_srr" in frame.columns:
-        samples = []
-        for row in frame.itertuples(index=False):
-            samples.append(
-                Sample(
-                    sample_id=str(row.illumina_srr),
-                    longread_id=str(row.longread_srr) if hasattr(row, "longread_srr") else None,
-                )
-            )
-        return samples
-    if "sample_id" not in frame.columns:
-        raise ValueError(f"{path} needs a sample_id column")
+    if sample_column not in frame.columns:
+        raise ValueError(f"{path} needs a {sample_column} column")
+    explicit_longread = longread_column is not None
+    if longread_column is None and "longread_srr" in frame.columns:
+        longread_column = "longread_srr"
     samples = []
     for row in frame.itertuples(index=False):
-        rna = getattr(row, "rna_id", None)
-        longread = getattr(row, "longread_srr", None)
+        sample_id = _cell(row, sample_column)
+        longread = _cell(row, longread_column)
+        if sample_id is None:
+            continue
+        if explicit_longread and longread is None:
+            continue
+        shortread = None
+        if "shortread_srr" in frame.columns and sample_column != "shortread_srr":
+            shortread = _cell(row, "shortread_srr")
         samples.append(
             Sample(
-                sample_id=str(row.sample_id),
-                rna_id=None if rna is None or str(rna) == "nan" else str(rna),
-                longread_id=None if longread is None or str(longread) == "nan" else str(longread),
+                sample_id=sample_id,
+                rna_id=_cell(row, "rna_id") if "rna_id" in frame.columns else None,
+                longread_id=longread,
+                shortread_id=shortread,
             )
         )
     return samples

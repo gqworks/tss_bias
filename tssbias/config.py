@@ -50,6 +50,8 @@ class Cohort:
     bioproject: str
     paired_rna: bool
     display_name: str
+    sample_column: str = "sample_id"
+    longread_column: str = ""
 
 
 @dataclass(frozen=True)
@@ -270,6 +272,8 @@ def _build(path: Path, repo_root: Path, raw: dict[str, Any], species: dict[str, 
             bioproject=str(item.get("bioproject", "")),
             paired_rna=bool(item.get("paired_rna", False)),
             display_name=str(item.get("display_name") or name),
+            sample_column=str(item.get("sample_column") or "sample_id"),
+            longread_column=str(item.get("longread_column") or ""),
         )
     return Config(
         config_path=path,

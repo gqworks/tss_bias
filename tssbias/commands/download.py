@@ -24,7 +24,7 @@ LOG = get_logger("tssbias.download")
 
 
 def run(cfg: Config, args: argparse.Namespace) -> None:
-    """Download ``sample_id`` runs, plus ``rna_id`` and ``longread_srr`` when present.
+    """Download ``sample_id`` runs, plus extra accessions when present.
 
     Inputs:
         args.manifest: TSV with a ``sample_id`` column. The output directory
@@ -32,7 +32,8 @@ def run(cfg: Config, args: argparse.Namespace) -> None:
     Outputs:
         ``{data_root}/fastq/<stem>/{SRR}_1.fastq.gz`` and ``_2`` for paired
         reads. ``rna_id`` goes in ``rna/``. ``longread_srr`` goes in
-        ``longread/``. A dump that emits one FASTQ is kept as that one file.
+        ``longread/``. ``shortread_srr`` goes in ``shortread/``. A dump that
+        emits one FASTQ is kept as that one file.
     """
     manifest = Path(args.manifest)
     require_tool("fasterq-dump")
@@ -44,6 +45,8 @@ def run(cfg: Config, args: argparse.Namespace) -> None:
             _fetch(sample.rna_id, out / "rna")
         if sample.longread_id:
             _fetch(sample.longread_id, out / "longread")
+        if sample.shortread_id:
+            _fetch(sample.shortread_id, out / "shortread")
     LOG.info("manifest %s: %s samples under %s", manifest.name, len(samples), out)
 
 

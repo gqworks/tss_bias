@@ -66,6 +66,11 @@ def main(argv: list[str] | None = None) -> int:
         type=Path,
         help="Manifest TSV. Writes {data_root}/mpa4_res/<cohort>/merged_mpa.txt",
     )
+    mpa_cmd.add_argument(
+        "--cohort",
+        default=None,
+        help="Cohort key when one manifest feeds two cohorts (nanopore.tsv also profiles matched short reads)",
+    )
     mpa_cmd.add_argument("--sample", default=None, help="Profile one manifest sample id")
     mpa_cmd.add_argument(
         "--sample-index",

@@ -41,7 +41,11 @@ def selected_samples(cfg: Config, cohort: Cohort, args: argparse.Namespace) -> l
         Sample list. Raises MissingInputError if the index or id is absent.
     """
     del cfg
-    samples = read_manifest(cohort.manifest)
+    samples = read_manifest(
+        cohort.manifest,
+        sample_column=cohort.sample_column,
+        longread_column=cohort.longread_column or None,
+    )
     if args.sample_index is not None:
         if args.sample_index < 0 or args.sample_index >= len(samples):
             raise MissingInputError(

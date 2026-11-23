@@ -39,9 +39,14 @@ def run(cfg: Config, args: argparse.Namespace) -> None:
         ``results/matched_longread/paired_test.csv``
     """
     cohort = cfg.cohort("matched")
+    nanopore = cfg.cohort("nanopore")
     if not cohort.manifest.exists():
         raise MissingInputError("matched-sample manifest", [cohort.manifest])
-    samples = read_manifest(cohort.manifest)
+    samples = read_manifest(
+        cohort.manifest,
+        sample_column=cohort.sample_column,
+        longread_column=cohort.longread_column or None,
+    )
     if args.sample:
         samples = [sample for sample in samples if sample.sample_id == args.sample]
     if args.sample_index is not None:
@@ -51,8 +56,9 @@ def run(cfg: Config, args: argparse.Namespace) -> None:
                 [cohort.manifest],
             )
         samples = [samples[args.sample_index]]
-    # download writes DNA under fastq/<manifest stem>/ and long reads under longread/.
-    longread_dir = cohort.fastq_dir / "longread"
+    # download of nanopore.tsv writes ONT reads in fastq/nanopore/ and the
+    # matched Illumina runs in fastq/nanopore/shortread/.
+    longread_dir = nanopore.fastq_dir
     rows = []
     for sample in samples:
         if not sample.longread_id:
@@ -89,7 +95,7 @@ def _one(cfg: Config, illumina_dir, longread_dir, sample: str, longread_id: str)
     if missing:
         raise MissingInputError(
             "matched short and long FASTQs. Stage them with "
-            "`python -m tssbias download data/manifests/matched_longread.tsv`. "
+            "`python -m tssbias download data/manifests/nanopore.tsv`. "
             "This command does not download FASTQs.",
             missing,
         )

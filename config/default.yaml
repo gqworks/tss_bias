@@ -98,7 +98,7 @@ cohorts:
     fastq_dir: "{data_root}/fastq/liu2016"
     seq_type: illumina
     abundance_min_pct: 0.5
-    abundance_min_samples: 10
+    abundance_min_samples: 30
     species_set: liu2016
     abundance_table: "{data_root}/mpa4_res/liu2016/merged_mpa.txt"
     bioproject: PRJNA328899
@@ -110,7 +110,7 @@ cohorts:
     fastq_dir: "{data_root}/fastq/hmp3_stool"
     seq_type: illumina
     abundance_min_pct: 0.5
-    abundance_min_samples: 5
+    abundance_min_samples: 30
     species_set: correlation
     abundance_table: "{data_root}/mpa4_res/hmp3_stool/merged_mpa.txt"
     bioproject: PRJNA275349
@@ -147,9 +147,11 @@ cohorts:
     abundance_table: "{data_root}/mpa4_res/mock/merged_mpa.txt"
     bioproject: PRJNA510527
     paired_rna: false
+  # Same donors as nanopore. sample_id in that file is the ONT run;
+  # shortread_srr is the matched Illumina run.
   matched:
-    manifest: "{repo_root}/data/manifests/matched_longread.tsv"
-    fastq_dir: "{data_root}/fastq/matched_longread"
+    manifest: "{repo_root}/data/manifests/nanopore.tsv"
+    fastq_dir: "{data_root}/fastq/nanopore/shortread"
     seq_type: illumina
     abundance_min_pct: 0.5
     abundance_min_samples: 5
@@ -157,3 +159,5 @@ cohorts:
     abundance_table: "{data_root}/mpa4_res/matched/merged_mpa.txt"
     bioproject: PRJNA820119
     paired_rna: false
+    sample_column: shortread_srr
+    longread_column: sample_id

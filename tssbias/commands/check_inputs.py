@@ -48,7 +48,11 @@ def run(cfg: Config, args: argparse.Namespace) -> None:
     check("abundance", abundance_path(cfg, cohort))
     check("fastq_dir", cohort.fastq_dir)
     if cohort.manifest.exists():
-        samples = read_manifest(cohort.manifest)
+        samples = read_manifest(
+            cohort.manifest,
+            sample_column=cohort.sample_column,
+            longread_column=cohort.longread_column or None,
+        )
         for sample in samples:
             for path in fastq_paths(cohort.fastq_dir, sample.sample_id, cohort.seq_type):
                 check(f"fastq[{sample.sample_id}]", path)

@@ -98,7 +98,7 @@ def test_hmp3_stool_replaces_private_hyp():
     cohort = cfg.cohort("hmp3_stool")
     assert cohort.bioproject == "PRJNA275349"
     assert cohort.abundance_min_pct == 0.5
-    assert cohort.abundance_min_samples == 5
+    assert cohort.abundance_min_samples == 30
     assert cohort.species_set == "correlation"
     assert cohort.paired_rna is False
     frame = pd.read_csv(cohort.manifest, sep="\t", dtype=str)
@@ -129,7 +129,7 @@ def test_liu2016_replaces_private_arg():
     assert cohort.display_name == "Liu et al."
     assert cohort.bioproject == "PRJNA328899"
     assert cohort.abundance_min_pct == 0.5
-    assert cohort.abundance_min_samples == 10
+    assert cohort.abundance_min_samples == 30
     assert cohort.species_set == "liu2016"
     assert cohort.paired_rna is False
     assert cohort.fastq_dir.name == "liu2016"
@@ -180,7 +180,6 @@ def test_public_manifests_use_sra_run_ids():
         "franzosa": (8, "PRJNA188481", "SRP019038", False),
         "pacbio": (11, "PRJNA754443", "SRP332749", False),
         "nanopore": (20, "PRJNA820119", "SRP366030", False),
-        "matched": (10, "PRJNA820119", "SRP366030", False),
     }
     for name, (n, project, study, paired) in expected.items():
         cohort = cfg.cohort(name)
@@ -206,14 +205,21 @@ def test_public_manifests_use_sra_run_ids():
     hmp2 = pd.read_csv(cfg.cohort("hmp2").manifest, sep="\t", dtype=str)
     assert hmp2["rna_id"].is_unique
     assert set(hmp2["rna_id"]).isdisjoint(set(hmp2["sample_id"]))
-    matched = pd.read_csv(cfg.cohort("matched").manifest, sep="\t", dtype=str)
-    samples = read_manifest(cfg.cohort("matched").manifest)
-    assert [sample.longread_id for sample in samples] == matched["longread_srr"].tolist()
-    assert set(matched["library_layout"]) == {"PAIRED"}
     nanopore = pd.read_csv(cfg.cohort("nanopore").manifest, sep="\t", dtype=str)
     assert set(nanopore["sample_alias"]) == {f"CD{i}" for i in range(81, 101)}
-    assert set(matched["longread_srr"]) <= set(nanopore["sample_id"])
     assert set(nanopore["library_layout"]) == {"SINGLE"}
+    assert nanopore["shortread_srr"].is_unique
+    assert set(nanopore["shortread_srr"]).isdisjoint(set(nanopore["sample_id"]))
+    ont = read_manifest(cfg.cohort("nanopore").manifest)
+    assert [sample.shortread_id for sample in ont] == nanopore["shortread_srr"].tolist()
+    matched = cfg.cohort("matched")
+    assert matched.manifest == cfg.cohort("nanopore").manifest
+    assert matched.sample_column == "shortread_srr"
+    assert matched.longread_column == "sample_id"
+    pairs = read_manifest(matched.manifest, matched.sample_column, matched.longread_column)
+    assert [sample.sample_id for sample in pairs] == nanopore["shortread_srr"].tolist()
+    assert [sample.longread_id for sample in pairs] == nanopore["sample_id"].tolist()
+    assert not (cfg.repo_root / "data/manifests/matched_longread.tsv").exists()
 
 
 def test_hmp3_stool_discover_fails_when_fastqs_are_absent(capsys):
@@ -236,7 +242,7 @@ def test_mock_cohort_uses_one_manifest_and_does_not_download(capsys):
     assert list(frame["sample_id"]) == ["SRR8359173"]
     assert list(frame["longread_srr"]) == ["SRR11606871"]
     assert cohort.fastq_dir.name == "mock"
-    assert cfg.cohort("matched").fastq_dir.name == "matched_longread"
+    assert cfg.cohort("matched").fastq_dir.name == "shortread"
     code = main(["mock"])
     captured = capsys.readouterr()
     assert code == 2
@@ -253,7 +259,8 @@ def test_mock_cohort_uses_one_manifest_and_does_not_download(capsys):
     code = main(["matched-longread", "--sample-index", "0"])
     captured = capsys.readouterr()
     assert code == 2
-    assert "fastq/matched_longread/longread/" in captured.err
+    assert "fastq/nanopore/shortread/SRR18491235" in captured.err
+    assert "fastq/nanopore/SRR18490957" in captured.err
 
 
 def test_hifi_subset_is_100k_and_written_before_downstream(tmp_path):
